@@ -91,6 +91,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 		ioIdle,
 		filename,
 		input,
+		output,
 	}
 	go distributor(p, distributorChannels)
 
