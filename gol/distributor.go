@@ -13,7 +13,7 @@ type distributorChannels struct {
 	ioIdle    <-chan bool
 	filename  chan<- string
 	input     <-chan uint8
-	output chan<- uint8
+	output    chan<- uint8
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -27,12 +27,6 @@ func distributor(p Params, c distributorChannels) {
 	for i := range world {
 		world[i] = make([]byte, p.ImageWidth)
 	}
-
-	nextWorld := make([][]byte, p.ImageHeight)
-	for i := range world {
-		nextWorld[i] = make([]byte, p.ImageWidth)
-	}
-
 
 	for i := range world {
 		for j := range world {
@@ -48,37 +42,35 @@ func distributor(p Params, c distributorChannels) {
 			}
 		}
 	}
-	
+
 	// TODO: Execute all turns of the Game of Life.
 	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
 	//		 See event.go for a list of all events.
 	turn := 0
 	for turn = 0; turn < p.Turns; turn++ {
-		nextWorld = calculateNextState(p, world)
+		world = calculateNextState(p, world)
 		c.events <- TurnComplete{CompletedTurns: turn}
 
 		for y := 0; y < p.ImageHeight; y++ {
 			for x := 0; x < p.ImageWidth; x++ {
 				if world[x][y] == alive {
-					c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
+					c.events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
 				}
 			}
 		}
 		if turn == p.Turns {
-			aliveCells := calculateAliveCells(p, nextWorld)
-			c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: aliveCells}
+			c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
 		}
 	}
 
-	for i:= range nextWorld{
-		for j:= range nextWorld{
-			c.output <- nextWorld[i][j]
-		}
-	}
-	
 	c.ioCommand <- ioOutput
 	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
+	for i := range world {
+		for j := range world {
+			c.output <- world[i][j]
+		}
+	}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
