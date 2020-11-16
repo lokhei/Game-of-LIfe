@@ -55,7 +55,8 @@ func distributor(p Params, c distributorChannels) {
 			}
 		}
 		if turn == p.Turns {
-			c.events <- FinalTurnComplete{CompletedTurns: turn}
+			aliveCells := calculateAliveCells(p, world)
+			c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: aliveCells}
 		}
 	}
 

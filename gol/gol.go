@@ -1,15 +1,13 @@
 package gol
 
+import "uk.ac.bris.cs/gameoflife/util"
+
 // Params provides the details of how to run the Game of Life and which image to load.
 type Params struct {
 	Turns       int
 	Threads     int
 	ImageWidth  int
 	ImageHeight int
-}
-
-type cell struct {
-	x, y int
 }
 
 const alive = 255
@@ -64,13 +62,13 @@ func calculateNextState(p Params, world [][]byte) [][]byte {
 }
 
 //takes the world as input and returns the (x, y) coordinates of all the cells that are alive.
-func calculateAliveCells(p Params, world [][]byte) []cell {
-	aliveCells := []cell{}
+func calculateAliveCells(p Params, world [][]byte) []util.Cell {
+	aliveCells := []util.Cell{}
 
 	for y := 0; y < p.ImageHeight; y++ {
 		for x := 0; x < p.ImageWidth; x++ {
 			if world[y][x] == alive {
-				aliveCells = append(aliveCells, cell{x: x, y: y})
+				aliveCells = append(aliveCells, util.Cell{X: x, Y: y})
 			}
 		}
 	}
