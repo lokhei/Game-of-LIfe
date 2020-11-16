@@ -46,6 +46,17 @@ func distributor(p Params, c distributorChannels) {
 	for turn = 0; turn < p.Turns; turn++ {
 		world = calculateNextState(p, world)
 		c.events <- TurnComplete{CompletedTurns: turn}
+
+		for y := 0; y < p.ImageHeight; y++ {
+			for x := 0; x < p.ImageWidth; x++ {
+				if world[x][y] == alive {
+					c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
+				}
+			}
+		}
+		if turn == p.Turns {
+			c.events <- FinalTurnComplete{CompletedTurns: turn}
+		}
 	}
 
 	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
