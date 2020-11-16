@@ -2,6 +2,7 @@ package gol
 
 import (
 	"fmt"
+
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
@@ -45,7 +46,7 @@ type StateChange struct { // implements Event
 }
 
 // CellFlipped is an Event notifying the GUI about a change of state of a single cell.
-// This even should be sent every time a cell changes state.
+// This event should be sent every time a cell changes state.
 // Make sure to send this event for all cells that are alive when the image is loaded in.
 type CellFlipped struct { // implements Event
 	CompletedTurns int
