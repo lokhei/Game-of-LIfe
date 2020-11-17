@@ -16,6 +16,11 @@ type distributorChannels struct {
 	output    chan<- uint8
 }
 
+func gameOfLife(p Params, World [][]byte) [][]byte {
+	return calculateNextState(p, World)
+
+}
+
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
@@ -35,25 +40,20 @@ func distributor(p Params, c distributorChannels) {
 	}
 
 	// TODO: For all initially alive cells send a CellFlipped Event.
-	for y := 0; y < p.ImageHeight; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
-			if world[x][y] == alive {
-				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
-			}
-		}
-	}
-
 	// TODO: Execute all turns of the Game of Life.
 	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
 	//		 See event.go for a list of all events.
 	turn := 0
-	for turn = 0; turn < p.Turns; turn++ {
-		world = calculateNextState(p, world)
+	for turn = 0; turn <= p.Turns; turn++ {
+		if turn > 0 {
+			world = calculateNextState(p, world)
+		}
+
 		c.events <- TurnComplete{CompletedTurns: turn}
 
 		for y := 0; y < p.ImageHeight; y++ {
 			for x := 0; x < p.ImageWidth; x++ {
-				if world[x][y] == alive {
+				if world[y][x] == alive {
 					c.events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
 				}
 			}
@@ -71,6 +71,7 @@ func distributor(p Params, c distributorChannels) {
 			c.output <- world[i][j]
 		}
 	}
+
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
