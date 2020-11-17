@@ -38,12 +38,15 @@ func distributor(p Params, c distributorChannels) {
 	// TODO: Execute all turns of the Game of Life.
 	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
 	//		 See event.go for a list of all events.
+	splitThreads := p.ImageHeight / p.Threads
+
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
-			splitThreads := p.ImageHeight / p.Threads //256/8 = 32
 			workerChannels := make([]chan [][]byte, p.Threads)
-			newData := make([][]byte, p.ImageWidth)
+
+			newWorld := make([][]byte, p.ImageHeight)
+
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)                                                  //make individual channels
 				go worker(p, i*splitThreads, (i+1)*splitThreads, splitThreads, world, workerChannels[i]) //start 4 workers
@@ -52,10 +55,10 @@ func distributor(p Params, c distributorChannels) {
 
 			for i := range workerChannels { // collects the resulting parts into a single 2D slice
 				workerResults := <-workerChannels[i]
-				newData = append(newData, workerResults...)
+				newWorld = append(newWorld, workerResults...)
 			}
 
-			// world = calculateNextState(p, world)
+			world = newWorld
 
 		}
 
@@ -92,7 +95,7 @@ func distributor(p Params, c distributorChannels) {
 }
 
 func worker(p Params, startY, endY, splitThreads int, world [][]byte, out chan<- [][]byte) {
-	newdata := calculateNextState(p, world, startY, endY, splitThreads)
-	out <- newdata
+	world = calculateNextState(p, world, startY, endY, splitThreads)
+	out <- world
 
 }
