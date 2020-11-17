@@ -33,14 +33,14 @@ func calculateNeighbours(p Params, x, y int, world [][]byte) int {
 }
 
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
-func calculateNextState(p Params, world [][]byte) [][]byte {
+func calculateNextState(p Params, world [][]byte, startY, endY, splitThreads int) [][]byte {
 	//makes a new world
 	newWorld := make([][]byte, p.ImageHeight)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, p.ImageWidth)
 	}
 	//sets cells to dead or alive according to num of neighbours
-	for y := 0; y < p.ImageHeight; y++ {
+	for y := startY; y < endY; y++ {
 		for x := 0; x < p.ImageWidth; x++ {
 			neighbours := calculateNeighbours(p, x, y, world)
 			if world[y][x] == alive {

@@ -16,11 +16,6 @@ type distributorChannels struct {
 	output    chan<- uint8
 }
 
-func gameOfLife(p Params, World [][]byte) [][]byte {
-	return calculateNextState(p, World)
-
-}
-
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
@@ -46,7 +41,22 @@ func distributor(p Params, c distributorChannels) {
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
-			world = calculateNextState(p, world)
+			splitThreads := p.ImageHeight / p.Threads //256/8 = 32
+			workerChannels := make([]chan [][]byte, p.Threads)
+			newData := make([][]byte, p.ImageWidth)
+			for i := range workerChannels {
+				workerChannels[i] = make(chan [][]byte)                                                  //make individual channels
+				go worker(p, i*splitThreads, (i+1)*splitThreads, splitThreads, world, workerChannels[i]) //start 4 workers
+
+			}
+
+			for i := range workerChannels { // collects the resulting parts into a single 2D slice
+				workerResults := <-workerChannels[i]
+				newData = append(newData, workerResults...)
+			}
+
+			// world = calculateNextState(p, world)
+
 		}
 
 		c.events <- TurnComplete{CompletedTurns: turn}
@@ -79,4 +89,10 @@ func distributor(p Params, c distributorChannels) {
 	c.events <- StateChange{turn, Quitting}
 	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
 	close(c.events)
+}
+
+func worker(p Params, startY, endY, splitThreads int, world [][]byte, out chan<- [][]byte) {
+	newdata := calculateNextState(p, world, startY, endY, splitThreads)
+	out <- newdata
+
 }
