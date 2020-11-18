@@ -45,7 +45,7 @@ func distributor(p Params, c distributorChannels) {
 		if turn > 0 {
 			workerChannels := make([]chan [][]byte, p.Threads)
 
-			newWorld := make([][]byte, p.ImageHeight)
+			newWorld := make([][]byte, p.ImageWidth)
 
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)                                                  //make individual channels
@@ -58,8 +58,12 @@ func distributor(p Params, c distributorChannels) {
 				newWorld = append(newWorld, workerResults...)
 			}
 
+			// for y := range world {
+			// 	for x := range world {
+			// 		world[y][x] = newWorld[y][x]
+			// 	}
+			// }
 			world = newWorld
-
 		}
 
 		c.events <- TurnComplete{CompletedTurns: turn}
@@ -79,9 +83,9 @@ func distributor(p Params, c distributorChannels) {
 	c.ioCommand <- ioOutput
 	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
-	for i := range world {
-		for j := range world {
-			c.output <- world[i][j]
+	for y := 0; y < p.ImageHeight; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			c.output <- world[y][x]
 		}
 	}
 
