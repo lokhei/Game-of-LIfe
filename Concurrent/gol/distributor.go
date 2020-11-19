@@ -84,7 +84,7 @@ func distributor(p Params, c distributorChannels) {
 					for {
 						tempKey := <-c.keyPresses
 						if tempKey == 'p' {
-							fmt.Println("Contunuing")
+							fmt.Println("Continuing")
 							c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
 							break
 						}
