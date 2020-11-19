@@ -1,20 +1,21 @@
 package gol
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
+
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
 type distributorChannels struct {
-	events    chan<- Event
-	ioCommand chan<- ioCommand
-	ioIdle    <-chan bool
-	filename  chan<- string
-	input     <-chan uint8
-	output    chan<- uint8
+	events     chan<- Event
+	ioCommand  chan<- ioCommand
+	ioIdle     <-chan bool
+	filename   chan<- string
+	input      <-chan uint8
+	output     chan<- uint8
 	keyPresses <-chan rune
 }
 
@@ -68,24 +69,22 @@ func distributor(p Params, c distributorChannels) {
 			world = tempWorld
 
 			select {
-			case key := <- c.keyPresses:
-				if key == 's'{
+			case key := <-c.keyPresses:
+				if key == 's' {
 					printBoard(p, c, world, turn)
-					
-				} else if key == 'q'{
+
+				} else if key == 'q' {
 					printBoard(p, c, world, turn)
-					fmt.Println("Terminated.")
 					c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
 					return
 
-				}else if key == 'p'{
+				} else if key == 'p' {
 					fmt.Println(turn)
-					fmt.Println("Pausing.")
 					c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
-					for{
-						tempKey := <- c.keyPresses
-						if tempKey == 'p'{
-							fmt.Println("Continuing")
+					for {
+						tempKey := <-c.keyPresses
+						if tempKey == 'p' {
+							fmt.Println("Contunuing")
 							c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
 							break
 						}
@@ -136,14 +135,15 @@ func ticker(aliveChan chan bool) {
 
 func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	c.ioCommand <- ioOutput
-	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
+	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
+	c.filename <- fileName
 
 	for y := range world {
 		for x := range world {
 			c.output <- world[y][x]
 		}
 	}
-
+	c.events <- ImageOutputComplete{CompletedTurns: turn, Filename: fileName}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
