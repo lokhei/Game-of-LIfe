@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
+
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
 )
@@ -16,7 +17,7 @@ func main() {
 	flag.IntVar(
 		&params.Threads,
 		"t",
-		2,
+		8,
 		"Specify the number of worker threads to use. Defaults to 8.")
 
 	flag.IntVar(
@@ -37,7 +38,7 @@ func main() {
 		10000000000,
 		"Specify the number of turns to process. Defaults to 10000000000.")
 
-	flag.Parse()  
+	flag.Parse()
 
 	fmt.Println("Threads:", params.Threads)
 	fmt.Println("Width:", params.ImageWidth)
