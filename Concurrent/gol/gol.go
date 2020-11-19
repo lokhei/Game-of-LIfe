@@ -35,7 +35,7 @@ func calculateNeighbours(p Params, x, y int, world [][]byte) int {
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
 func calculateNextState(p Params, world [][]uint8, startY, endY int) [][]uint8 {
 	//makes a new world
-	newWorld := make([][]uint8, p.ImageHeight)
+	newWorld := make([][]uint8, endY-startY)
 	for i := range newWorld {
 		newWorld[i] = make([]uint8, p.ImageWidth)
 	}
@@ -45,15 +45,15 @@ func calculateNextState(p Params, world [][]uint8, startY, endY int) [][]uint8 {
 			neighbours := calculateNeighbours(p, x, y, world)
 			if world[y][x] == alive {
 				if neighbours == 2 || neighbours == 3 {
-					newWorld[y][x] = alive
+					newWorld[y-startY][x] = alive
 				} else {
-					newWorld[y][x] = dead
+					newWorld[y-startY][x] = dead
 				}
 			} else {
 				if neighbours == 3 {
-					newWorld[y][x] = alive
+					newWorld[y-startY][x] = alive
 				} else {
-					newWorld[y][x] = dead
+					newWorld[y-startY][x] = dead
 				}
 			}
 		}

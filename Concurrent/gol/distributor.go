@@ -72,6 +72,7 @@ func distributor(p Params, c distributorChannels) {
 				c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
 			default:
 			}
+
 		}
 
 		c.events <- TurnComplete{CompletedTurns: turn}
@@ -89,6 +90,27 @@ func distributor(p Params, c distributorChannels) {
 		}
 	}
 
+	printBoard(p, c, world)
+
+	c.events <- StateChange{turn, Quitting}
+	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
+	close(c.events)
+}
+
+func worker(p Params, startY, endY int, world [][]byte, out chan<- [][]uint8) {
+	newData := calculateNextState(p, world, startY, endY)
+	out <- newData
+
+}
+
+func ticker(aliveChan chan bool) {
+	for {
+		time.Sleep(2 * time.Second)
+		aliveChan <- true
+	}
+}
+
+func printBoard(p Params, c distributorChannels, world [][]byte) {
 	c.ioCommand <- ioOutput
 	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(p.Turns)}, "x")
 
@@ -101,23 +123,4 @@ func distributor(p Params, c distributorChannels) {
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
-
-	c.events <- StateChange{turn, Quitting}
-	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
-	close(c.events)
-}
-
-func worker(p Params, startY, endY int, world [][]byte, out chan<- [][]uint8) {
-	newData := calculateNextState(p, world, startY, endY)
-	subslice := newData[startY:endY]
-
-	out <- subslice
-
-}
-
-func ticker(aliveChan chan bool) {
-	for {
-		time.Sleep(2 * time.Second)
-		aliveChan <- true
-	}
 }
