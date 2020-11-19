@@ -1,14 +1,10 @@
 package gol
 
 import (
-	"fmt"
-	"image"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	// "fmt"
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
@@ -30,9 +26,8 @@ func distributor(p Params, c distributorChannels) {
 	//		 See event.go for a list of all events.
 
 	c.ioCommand <- ioInput
-	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
-	c.filename <- fileName
 	world := make([][]byte, p.ImageHeight)
 	for i := range world {
 		world[i] = make([]byte, p.ImageWidth)
@@ -51,7 +46,7 @@ func distributor(p Params, c distributorChannels) {
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
 			workerChannels := make([]chan [][]byte, p.Threads)
-			splitThreads := p.ImageHeight / p.Threads //16/2 = 8
+			splitThreads := p.ImageHeight / p.Threads
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
 				if i == p.Threads-1 {
@@ -89,21 +84,15 @@ func distributor(p Params, c distributorChannels) {
 		}
 		if turn == p.Turns {
 			c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
-			// c.events <- ImageOutputComplete{CompletedTurns: turn, Filename: fileName + ".pgm"}
-			imout := image.NewGray(image.Rect(0, 0, p.ImageWidth, p.ImageHeight))
-			imout.Pix = flattenImage(world)
-			ofp, _ := os.Create("out/" + fmt.Sprintf("%vx%vx%v.pgm", p.ImageWidth, p.ImageHeight, turn))
-			defer ofp.Close()
-			// err := png.Encode(ofp, imout)
-			// check(err)
+
 		}
 	}
 
 	c.ioCommand <- ioOutput
-	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(p.Turns)}, "x")
 
-	for y := 0; y < p.ImageHeight; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
+	for y := range world {
+		for x := range world {
 			c.output <- world[y][x]
 		}
 	}
@@ -130,15 +119,4 @@ func ticker(aliveChan chan bool) {
 		time.Sleep(2 * time.Second)
 		aliveChan <- true
 	}
-}
-
-func flattenImage(flattenedImage [][]uint8) []uint8 {
-	height := len(flattenedImage)
-	width := len(flattenedImage[0])
-
-	filteredImageFlattened := make([]uint8, 0, height*width)
-	for i := 0; i < height; i++ {
-		filteredImageFlattened = append(filteredImageFlattened, flattenedImage[i]...)
-	}
-	return filteredImageFlattened
 }
