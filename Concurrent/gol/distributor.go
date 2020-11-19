@@ -3,6 +3,7 @@ package gol
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	// "fmt"
 	"uk.ac.bris.cs/gameoflife/util"
@@ -39,9 +40,17 @@ func distributor(p Params, c distributorChannels) {
 		}
 	}
 
+	periodicChan := make(chan bool)
+	go ticker(periodicChan)
+
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
+
+			// select {
+			// case <-periodicChan:
+			// 	c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
+			// }
 			workerChannels := make([]chan [][]byte, p.Threads)
 			splitThreads := p.ImageHeight / p.Threads //16/2 = 8
 			for i := range workerChannels {
@@ -62,12 +71,12 @@ func distributor(p Params, c distributorChannels) {
 				tempWorld = append(tempWorld, workerResults...)
 			}
 
-			for i := range tempWorld {
-				for j := range tempWorld {
-					world[i][j] = tempWorld[i][j]
-				}
-			}
+			world = tempWorld
 
+			select {
+			case <-periodicChan:
+				c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
+			}
 		}
 
 		c.events <- TurnComplete{CompletedTurns: turn}
@@ -108,4 +117,11 @@ func worker(p Params, startY, endY int, world [][]byte, out chan<- [][]uint8) {
 
 	out <- subslice
 
+}
+
+func ticker(aliveChan chan bool) {
+	for {
+		time.Sleep(2 * time.Second)
+		aliveChan <- true
+	}
 }
