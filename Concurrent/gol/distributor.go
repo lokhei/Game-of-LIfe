@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	// "fmt"
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
@@ -18,11 +19,15 @@ type distributorChannels struct {
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
+	// TODO: Create a 2D slice to store the world.
+	// TODO: For all initially alive cells send a CellFlipped Event.
+	// TODO: Execute all turns of the Game of Life.
+	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
+	//		 See event.go for a list of all events.
 
 	c.ioCommand <- ioInput
 	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
-	// TODO: Create a 2D slice to store the world.
 	world := make([][]byte, p.ImageHeight)
 	for i := range world {
 		world[i] = make([]byte, p.ImageWidth)
@@ -34,36 +39,35 @@ func distributor(p Params, c distributorChannels) {
 		}
 	}
 
-	// TODO: For all initially alive cells send a CellFlipped Event.
-	// TODO: Execute all turns of the Game of Life.
-	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
-	//		 See event.go for a list of all events.
-	splitThreads := p.ImageHeight / p.Threads
-
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
 			workerChannels := make([]chan [][]byte, p.Threads)
-
-			newWorld := make([][]byte, p.ImageWidth)
-
+			splitThreads := p.ImageHeight / p.Threads //16/2 = 8
 			for i := range workerChannels {
-				workerChannels[i] = make(chan [][]byte)                                                  //make individual channels
-				go worker(p, i*splitThreads, (i+1)*splitThreads, splitThreads, world, workerChannels[i]) //start 4 workers
+				workerChannels[i] = make(chan [][]byte)
+				if i == p.Threads-1 {
+					rem := mod(p.ImageHeight, p.Threads)
+					go worker(p, i*splitThreads, (i+1)*splitThreads+rem, world, workerChannels[i])
+
+				} else {
+					go worker(p, i*splitThreads, (i+1)*splitThreads, world, workerChannels[i])
+				}
 
 			}
 
+			tempWorld := make([][]byte, 0)
 			for i := range workerChannels { // collects the resulting parts into a single 2D slice
 				workerResults := <-workerChannels[i]
-				newWorld = append(newWorld, workerResults...)
+				tempWorld = append(tempWorld, workerResults...)
 			}
 
-			// for y := range world {
-			// 	for x := range world {
-			// 		world[y][x] = newWorld[y][x]
-			// 	}
-			// }
-			world = newWorld
+			for i := range tempWorld {
+				for j := range tempWorld {
+					world[i][j] = tempWorld[i][j]
+				}
+			}
+
 		}
 
 		c.events <- TurnComplete{CompletedTurns: turn}
@@ -98,8 +102,10 @@ func distributor(p Params, c distributorChannels) {
 	close(c.events)
 }
 
-func worker(p Params, startY, endY, splitThreads int, world [][]byte, out chan<- [][]byte) {
-	world = calculateNextState(p, world, startY, endY, splitThreads)
-	out <- world
+func worker(p Params, startY, endY int, world [][]byte, out chan<- [][]uint8) {
+	newData := calculateNextState(p, world, startY, endY)
+	subslice := newData[startY:endY]
+
+	out <- subslice
 
 }

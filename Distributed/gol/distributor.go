@@ -16,7 +16,7 @@ type distributorChannels struct {
 	output    chan<- uint8
 }
 
-func gameOfLife(p Params, World [][]byte) [][]byte {
+func gameOfLife(p Params, World [][]uint8) [][]uint8 {
 	return calculateNextState(p, World)
 
 }
@@ -28,9 +28,9 @@ func distributor(p Params, c distributorChannels) {
 	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
 	// TODO: Create a 2D slice to store the world.
-	world := make([][]byte, p.ImageHeight)
+	world := make([][]uint8, p.ImageHeight)
 	for i := range world {
-		world[i] = make([]byte, p.ImageWidth)
+		world[i] = make([]uint8, p.ImageWidth)
 	}
 
 	for i := range world {
