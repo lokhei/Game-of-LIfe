@@ -40,7 +40,7 @@ func NewWindow(width, height int32) *Window {
 		make([]byte, width*height*4),
 	}
 }
-
+ 
 func (w *Window) Destroy() {
 	err := w.texture.Destroy()
 	util.Check(err)

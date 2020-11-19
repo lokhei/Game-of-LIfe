@@ -37,7 +37,7 @@ func main() {
 		10000000000,
 		"Specify the number of turns to process. Defaults to 10000000000.")
 
-	flag.Parse()
+	flag.Parse()  
 
 	fmt.Println("Threads:", params.Threads)
 	fmt.Println("Width:", params.ImageWidth)

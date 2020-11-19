@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"fmt"
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
@@ -15,6 +15,7 @@ type distributorChannels struct {
 	filename  chan<- string
 	input     <-chan uint8
 	output    chan<- uint8
+	keyPresses <-chan rune
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -64,10 +65,33 @@ func distributor(p Params, c distributorChannels) {
 				workerResults := <-workerChannels[i]
 				tempWorld = append(tempWorld, workerResults...)
 			}
-
 			world = tempWorld
 
 			select {
+			case key := <- c.keyPresses:
+				if key == 's'{
+					printBoard(p, c, world, turn)
+					
+				} else if key == 'q'{
+					printBoard(p, c, world, turn)
+					fmt.Println("Terminated.")
+					c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
+					return
+
+				}else if key == 'p'{
+					fmt.Println(turn)
+					fmt.Println("Pausing.")
+					c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
+					for{
+						tempKey := <- c.keyPresses
+						if tempKey == 'p'{
+							fmt.Println("Continuing")
+							c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
+							break
+						}
+					}
+				}
+
 			case <-periodicChan:
 				c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
 			default:
@@ -90,7 +114,7 @@ func distributor(p Params, c distributorChannels) {
 		}
 	}
 
-	printBoard(p, c, world)
+	printBoard(p, c, world, p.Turns)
 
 	c.events <- StateChange{turn, Quitting}
 	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
@@ -110,9 +134,9 @@ func ticker(aliveChan chan bool) {
 	}
 }
 
-func printBoard(p Params, c distributorChannels, world [][]byte) {
+func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	c.ioCommand <- ioOutput
-	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(p.Turns)}, "x")
+	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
 
 	for y := range world {
 		for x := range world {
