@@ -76,6 +76,7 @@ func distributor(p Params, c distributorChannels) {
 				} else if key == 'q' {
 					printBoard(p, c, world, turn)
 					c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
+					close(c.events)
 					return
 
 				} else if key == 'p' {
