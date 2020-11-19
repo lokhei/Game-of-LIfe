@@ -70,6 +70,7 @@ func distributor(p Params, c distributorChannels) {
 			select {
 			case <-periodicChan:
 				c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
+			default:
 			}
 		}
 
