@@ -1,6 +1,9 @@
 package gol
 
 import (
+	"fmt"
+	"image"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -27,8 +30,9 @@ func distributor(p Params, c distributorChannels) {
 	//		 See event.go for a list of all events.
 
 	c.ioCommand <- ioInput
-	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
+	c.filename <- fileName
 	world := make([][]byte, p.ImageHeight)
 	for i := range world {
 		world[i] = make([]byte, p.ImageWidth)
@@ -46,11 +50,6 @@ func distributor(p Params, c distributorChannels) {
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
-
-			// select {
-			// case <-periodicChan:
-			// 	c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
-			// }
 			workerChannels := make([]chan [][]byte, p.Threads)
 			splitThreads := p.ImageHeight / p.Threads //16/2 = 8
 			for i := range workerChannels {
@@ -90,6 +89,13 @@ func distributor(p Params, c distributorChannels) {
 		}
 		if turn == p.Turns {
 			c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
+			// c.events <- ImageOutputComplete{CompletedTurns: turn, Filename: fileName + ".pgm"}
+			imout := image.NewGray(image.Rect(0, 0, p.ImageWidth, p.ImageHeight))
+			imout.Pix = flattenImage(world)
+			ofp, _ := os.Create("out/" + fmt.Sprintf("%vx%vx%v.pgm", p.ImageWidth, p.ImageHeight, turn))
+			defer ofp.Close()
+			// err := png.Encode(ofp, imout)
+			// check(err)
 		}
 	}
 
@@ -124,4 +130,15 @@ func ticker(aliveChan chan bool) {
 		time.Sleep(2 * time.Second)
 		aliveChan <- true
 	}
+}
+
+func flattenImage(flattenedImage [][]uint8) []uint8 {
+	height := len(flattenedImage)
+	width := len(flattenedImage[0])
+
+	filteredImageFlattened := make([]uint8, 0, height*width)
+	for i := 0; i < height; i++ {
+		filteredImageFlattened = append(filteredImageFlattened, flattenedImage[i]...)
+	}
+	return filteredImageFlattened
 }
