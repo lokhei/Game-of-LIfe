@@ -30,18 +30,18 @@ func calculateNeighbours(p Params, x, y int, world [][]byte) int {
 		}
 	}
 	return neighbours
-}
+} 
 
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
-func calculateNextState(p Params, world [][]byte, startY, endY, splitThreads int) [][]byte {
+func calculateNextState(p Params, world [][]uint8, startY, endY, startX, endX int) [][]uint8 {
 	//makes a new world
-	newWorld := make([][]byte, p.ImageHeight)
+	newWorld := make([][]uint8, p.ImageHeight)
 	for i := range newWorld {
-		newWorld[i] = make([]byte, p.ImageWidth)
+		newWorld[i] = make([]uint8, p.ImageWidth)
 	}
-	//sets cells to dead or alive according to num of neighbours
+	//sets cells to dead or alive according to num of neighbours 
 	for y := startY; y < endY; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
+		for x := startX; x < endX; x++ {
 			neighbours := calculateNeighbours(p, x, y, world)
 			if world[y][x] == alive {
 				if neighbours == 2 || neighbours == 3 {
@@ -62,7 +62,7 @@ func calculateNextState(p Params, world [][]byte, startY, endY, splitThreads int
 }
 
 //takes the world as input and returns the (x, y) coordinates of all the cells that are alive.
-func calculateAliveCells(p Params, world [][]byte) []util.Cell {
+func calculateAliveCells(p Params, world [][]uint8) []util.Cell {
 	aliveCells := []util.Cell{}
 
 	for y := 0; y < p.ImageHeight; y++ {
