@@ -44,6 +44,7 @@ func distributor(p Params, c distributorChannels) {
 	periodicChan := make(chan bool)
 	go ticker(periodicChan)
 
+	rem := mod(p.ImageHeight, p.Threads)
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
@@ -51,12 +52,12 @@ func distributor(p Params, c distributorChannels) {
 			splitThreads := p.ImageHeight / p.Threads
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
-				if i == p.Threads-1 {
-					rem := mod(p.ImageHeight, p.Threads)
-					go worker(p, i*splitThreads, (i+1)*splitThreads+rem, world, workerChannels[i])
+
+				if i < rem {
+					go worker(p, i*(splitThreads+1), (i+1)*(splitThreads+1), world, workerChannels[i])
 
 				} else {
-					go worker(p, i*splitThreads, (i+1)*splitThreads, world, workerChannels[i])
+					go worker(p, i*splitThreads+rem, (i+1)*splitThreads+rem, world, workerChannels[i])
 				}
 
 			}
