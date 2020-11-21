@@ -33,27 +33,27 @@ func calculateNeighbours(p Params, x, y int, world [][]byte) int {
 }
 
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
-func calculateNextState(p Params, world [][]uint8, startY, endY int) [][]uint8 {
+func calculateNextState(p Params, subworld [][]byte, startY, endY int) [][]byte {
 	//makes a new world
-	newWorld := make([][]uint8, endY-startY)
+	newWorld := make([][]byte, endY-startY)
 	for i := range newWorld {
-		newWorld[i] = make([]uint8, p.ImageWidth)
+		newWorld[i] = make([]byte, p.ImageWidth)
 	}
 	//sets cells to dead or alive according to num of neighbours
-	for y := startY; y < endY; y++ {
+	for y := 0; y < endY-startY; y++ {
 		for x := 0; x < p.ImageWidth; x++ {
-			neighbours := calculateNeighbours(p, x, y, world)
-			if world[y][x] == alive {
+			neighbours := calculateNeighbours(p, x, y+1, subworld)
+			if subworld[y+1][x] == alive {
 				if neighbours == 2 || neighbours == 3 {
-					newWorld[y-startY][x] = alive
+					newWorld[y][x] = alive
 				} else {
-					newWorld[y-startY][x] = dead
+					newWorld[y][x] = dead
 				}
 			} else {
 				if neighbours == 3 {
-					newWorld[y-startY][x] = alive
+					newWorld[y][x] = alive
 				} else {
-					newWorld[y-startY][x] = dead
+					newWorld[y][x] = dead
 				}
 			}
 		}
@@ -87,7 +87,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 
 	distributorChannels := distributorChannels{
 		events,
-		ioCommand, 
+		ioCommand,
 		ioIdle,
 		filename,
 		input,
