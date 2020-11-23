@@ -1,11 +1,13 @@
 package stubs
 
-var Nextworld = "nextStateOperation.distributor"
+var Nextworld = "NextStateOperation.Distributor"
 
 type Response struct {
-	Message string
+	Message [][]uint8
 }
 
 type Request struct {
-	Message string
+	Message [][]uint8
+	Threads int
+	Turns int
 }
