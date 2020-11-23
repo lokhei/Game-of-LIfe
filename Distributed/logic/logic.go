@@ -1,34 +1,40 @@
-package gol
+package main
 
 import (
-	"fmt"
+	"flag"
+	"math/rand"
+	"net"
+	"net/rpc"
 	"strconv"
 	"strings"
 	"time"
 
+	"uk.ac.bris.cs/gameoflife/stubs"
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
-type distributorChannels struct {
-	events     chan<- Event
-	ioCommand  chan<- ioCommand
-	ioIdle     <-chan bool
-	filename   chan<- string
-	input      <-chan uint8
-	output     chan<- uint8
-	keyPresses <-chan rune
-}
+// type distributorChannels struct {
+// 	events     chan<- Event
+// 	ioCommand  chan<- ioCommand
+// 	ioIdle     <-chan bool
+// 	filename   chan<- string
+// 	input      <-chan uint8
+// 	output     chan<- uint8
+// 	keyPresses <-chan rune
+// }
+
+type NextStateOperation struct{}
 
 // distributor divides the work between workers and interacts with other goroutines.
-func distributor(p Params, c distributorChannels) {
+func (s *NextStateOperation) distributor(req stubs.Request, res *stubs.Response) (err error) {
 	// TODO: Create a 2D slice to store the world.
 	// TODO: For all initially alive cells send a CellFlipped Event.
 	// TODO: Execute all turns of the Game of Life.
 	// TODO: Send correct Events when required, e.g. CellFlipped, TurnComplete and FinalTurnComplete.
 	//		 See event.go for a list of all events.
 
-	c.ioCommand <- ioInput
-	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+	// c.ioCommand <- ioInput
+	// c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
 	world := make([][]byte, p.ImageHeight)
 	for i := range world {
@@ -40,9 +46,6 @@ func distributor(p Params, c distributorChannels) {
 			world[i][j] = <-c.input
 		}
 	}
-
-	periodicChan := make(chan bool)
-	go ticker(periodicChan)
 
 	rem := mod(p.ImageHeight, p.Threads)
 	splitThreads := p.ImageHeight / p.Threads
@@ -72,35 +75,6 @@ func distributor(p Params, c distributorChannels) {
 				tempWorld = append(tempWorld, workerResults...)
 			}
 			world = tempWorld
-
-			select {
-			case key := <-c.keyPresses:
-				if key == 's' {
-					printBoard(p, c, world, turn)
-
-				} else if key == 'q' {
-					printBoard(p, c, world, turn)
-					c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
-					close(c.events)
-					return
-
-				} else if key == 'p' {
-					fmt.Println(turn)
-					c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
-					for {
-						tempKey := <-c.keyPresses
-						if tempKey == 'p' {
-							fmt.Println("Continuing")
-							c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
-							break
-						}
-					}
-				}
-
-			case <-periodicChan:
-				c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
-			default:
-			}
 
 		}
 
@@ -132,13 +106,6 @@ func worker(p Params, startY, endY int, world [][]byte, out chan<- [][]uint8) {
 
 }
 
-func ticker(aliveChan chan bool) {
-	for {
-		time.Sleep(2 * time.Second)
-		aliveChan <- true
-	}
-}
-
 func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	c.ioCommand <- ioOutput
 	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
@@ -153,4 +120,81 @@ func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
+}
+
+////////////
+const alive = 255
+const dead = 0
+
+func mod(x, m int) int {
+	return (x + m) % m
+}
+
+//calculates number of neighbours of cell
+func calculateNeighbours(p Params, x, y int, world [][]byte) int {
+	neighbours := 0
+	for i := -1; i <= 1; i++ {
+		for j := -1; j <= 1; j++ {
+			if i != 0 || j != 0 { //not [y][x]
+				if world[mod(y+i, p.ImageHeight)][mod(x+j, p.ImageWidth)] == alive {
+					neighbours++
+				}
+			}
+		}
+	}
+	return neighbours
+}
+
+//takes the current state of the world and completes one evolution of the world. It then returns the result.
+func calculateNextState(p Params, world [][]byte, startY, endY int) [][]byte {
+	//makes a new world
+	newWorld := make([][]byte, endY-startY)
+	for i := range newWorld {
+		newWorld[i] = make([]byte, p.ImageWidth)
+	}
+	//sets cells to dead or alive according to num of neighbours
+	for y := startY; y < endY; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			neighbours := calculateNeighbours(p, x, y, world)
+			if world[y][x] == alive {
+				if neighbours == 2 || neighbours == 3 {
+					newWorld[y-startY][x] = alive
+				} else {
+					newWorld[y-startY][x] = dead
+				}
+			} else {
+				if neighbours == 3 {
+					newWorld[y-startY][x] = alive
+				} else {
+					newWorld[y-startY][x] = dead
+				}
+			}
+		}
+	}
+	return newWorld
+}
+
+//takes the world as input and returns the (x, y) coordinates of all the cells that are alive.
+func calculateAliveCells(p Params, world [][]uint8) []util.Cell {
+	aliveCells := []util.Cell{}
+
+	for y := 0; y < p.ImageHeight; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			if world[y][x] == alive {
+				aliveCells = append(aliveCells, util.Cell{X: x, Y: y})
+			}
+		}
+	}
+
+	return aliveCells
+}
+
+func main() {
+	pAddr := flag.String("port", "8030", "Port to listen on")
+	flag.Parse()
+	rand.Seed(time.Now().UnixNano())
+	rpc.Register(&nextStateOperation{})
+	listener, _ := net.Listen("tcp", ":"+*pAddr)
+	defer listener.Close()
+	rpc.Accept(listener)
 }
