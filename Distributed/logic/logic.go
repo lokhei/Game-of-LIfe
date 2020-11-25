@@ -59,25 +59,8 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 
 		}
 		
-
-		// c.events <- TurnComplete{CompletedTurns: turn}
-		// for y := 0; y < height; y++ {
-		// 	for x := 0; x < width; x++ {
-		// 		if world[y][x] == alive {
-		// 			c.events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
-		// 		}
-		// 	}
-		// }
-		// if turn == turnNum {
-		// 	c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
-
-		// }
 	}
-
 	return
-	// c.events <- StateChange{turn, Quitting}
-	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
-	// close(c.events)
 }
 
 
@@ -138,7 +121,6 @@ func calculateNextState(height, width, startY, endY int, world [][]byte) [][]byt
 	}
 	return newWorld
 }
-
 
 
 func main() {

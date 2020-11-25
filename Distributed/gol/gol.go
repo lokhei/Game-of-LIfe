@@ -1,12 +1,10 @@
 package gol
 
 import (
-	"flag"
-	"fmt"
+	"flag" 
 	"net/rpc"
 	"strconv"
 	"strings"
-	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 	"uk.ac.bris.cs/gameoflife/util"
@@ -20,43 +18,11 @@ type Params struct {
 	ImageHeight int
 }
 
-func makeCall(client rpc.Client, world [][]uint8, events chan<- Event, keyPresses <-chan rune, p Params, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+func makeCall(client rpc.Client, world [][]uint8, events chan<- Event, p Params, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
 	client.Call(stubs.Nextworld, request, response)
-
-	periodicChan := make(chan bool)
-	go ticker(periodicChan)
-
-	select {
-	case key := <-keyPresses:
-		if key == 's' {
-			printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
-
-		} else if key == 'q' {
-			printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
-			events <- StateChange{CompletedTurns: p.Turns, NewState: Quitting}
-			close(events)
-			return
-
-		} else if key == 'p' {
-			fmt.Println(p.Turns)
-			events <- StateChange{CompletedTurns: p.Turns, NewState: Paused}
-			for {
-				tempKey := <-keyPresses
-				if tempKey == 'p' {
-					fmt.Println("Continuing")
-					events <- StateChange{CompletedTurns: p.Turns, NewState: Executing}
-					break
-				}
-			}
-		}
-
-	case <-periodicChan:
-		events <- AliveCellsCount{CompletedTurns: p.Turns, CellsCount: len(calculateAliveCells(p, world))}
-	default:
-	}
 
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 }
@@ -98,15 +64,8 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 		}
 	}
 
-	makeCall(*client, world, events, keyPresses, p, filename, output, ioCommand, ioIdle)
+	makeCall(*client, world, events, p, filename, output, ioCommand, ioIdle)
 
-}
-
-func ticker(aliveChan chan bool) {
-	for {
-		time.Sleep(2 * time.Second)
-		aliveChan <- true
-	}
 }
 
 func printBoard(p Params, world [][]byte, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, IoIdle <-chan bool, events chan<- Event) {
