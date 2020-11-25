@@ -23,9 +23,9 @@ type Params struct {
 func makeCall(client rpc.Client, world [][]byte, events chan<- Event, p Params, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
-	fmt.Println(request.Message)
+	// fmt.Println(request.Message)
 	client.Call(stubs.Nextworld, request, response)
-	fmt.Println("Responded: ", response.Message)
+	// fmt.Println("Responded: ", response.Message)
 
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 }
