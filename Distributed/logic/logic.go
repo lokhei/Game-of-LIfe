@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"math/rand"
 	"net"
 	"net/rpc"
@@ -23,13 +24,15 @@ import (
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
-func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)(err error) {
-
+func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
+	// fmt.Println("hi")
 	height := len(req.Message)
 	width := len(req.Message[0])
 
 	rem := mod(height, req.Threads)
 	splitThreads := height / req.Threads
+
+	world := req.Message
 
 	turn := 0
 	for turn = 0; turn <= req.Turns; turn++ {
@@ -46,7 +49,7 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 					endY = (i + 1) * (splitThreads + 1)
 				}
 
-				go worker(height, width, startY, endY, req.Message, workerChannels[i])
+				go worker(height, width, startY, endY, world, workerChannels[i])
 
 			}
 
@@ -55,14 +58,31 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 				workerResults := <-workerChannels[i]
 				tempWorld = append(tempWorld, workerResults...)
 			}
-			res.Message = tempWorld
+			world = tempWorld
 
 		}
-		
-	}
-	return
-}
 
+		res.Message = world
+
+		// c.events <- TurnComplete{CompletedTurns: turn}
+		// for y := 0; y < height; y++ {
+		// 	for x := 0; x < width; x++ {
+		// 		if world[y][x] == alive {
+		// 			c.events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
+		// 		}
+		// 	}
+		// }
+		// if turn == turnNum {
+		// 	c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
+
+		// }
+	}
+
+	return
+	// c.events <- StateChange{turn, Quitting}
+	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
+	// close(c.events)
+}
 
 func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint8) {
 	newData := calculateNextState(height, width, startY, endY, world)
@@ -122,13 +142,16 @@ func calculateNextState(height, width, startY, endY int, world [][]byte) [][]byt
 	return newWorld
 }
 
-
 func main() {
-	pAddr := flag.String("port", "8030", "Port to listen on")
+	pAddr := flag.String("port", ":8030", "Port to listen on")
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
 	rpc.Register(&NextStateOperation{})
-	listener, _ := net.Listen("tcp", ":"+*pAddr)
+	listener, err := net.Listen("tcp", *pAddr)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+
 	defer listener.Close()
 	rpc.Accept(listener)
 }

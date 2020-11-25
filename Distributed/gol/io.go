@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"uk.ac.bris.cs/gameoflife/util"
-) 
+)
 
 type ioChannels struct {
 	command <-chan ioCommand
