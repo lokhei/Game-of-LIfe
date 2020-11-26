@@ -25,7 +25,6 @@ type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
 func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
-	// fmt.Println("hi")
 	height := len(req.Message)
 	width := len(req.Message[0])
 
@@ -62,21 +61,22 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 
 		}
 
-		res.Message = world
+		// res.Message = world
 
-		// c.events <- TurnComplete{CompletedTurns: turn}
-		// for y := 0; y < height; y++ {
-		// 	for x := 0; x < width; x++ {
-		// 		if world[y][x] == alive {
-		// 			c.events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
+		// 	events <- TurnComplete{CompletedTurns: turn}
+		// 	for y := 0; y < height; y++ {
+		// 		for x := 0; x < width; x++ {
+		// 			if world[y][x] == alive {
+		// 				events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
+		// 			}
 		// 		}
 		// 	}
-		// }
-		// if turn == turnNum {
-		// 	c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
+		// 	if turn == turnNum {
+		// 		events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
 
-		// }
+		// 	}
 	}
+	res.Message = world
 
 	return
 	// c.events <- StateChange{turn, Quitting}

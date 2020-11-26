@@ -9,5 +9,5 @@ type Response struct {
 type Request struct {
 	Message [][]uint8
 	Threads int
-	Turns int
+	Turns   int
 }

@@ -2,7 +2,6 @@ package gol
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net/rpc"
 	"strconv"
@@ -23,10 +22,7 @@ type Params struct {
 func makeCall(client rpc.Client, world [][]byte, events chan<- Event, p Params, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
-	// fmt.Println(request.Message)
 	client.Call(stubs.Nextworld, request, response)
-	// fmt.Println("Responded: ", response.Message)
-
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 }
 
@@ -35,20 +31,12 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 
 	server := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
 	flag.Parse()
-
-	fmt.Println(*server)
 	client, err := rpc.Dial("tcp", *server)
-	// panic(err)
 	if err != nil {
 		log.Fatal("dialing:", err)
 
 	}
-
-	// if client == nil {
-	// 	fmt.Println("i wanna cry")
-	// }
 	defer client.Close()
-	// fmt.Println(client)
 
 	ioCommand := make(chan ioCommand)
 	ioIdle := make(chan bool)
@@ -78,11 +66,9 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 			world[i][j] = <-input
 		}
 	}
-
-	// request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
-	// response := new(stubs.Response)
-	// client.Call(stubs.Nextworld, request, response)
 	makeCall(*client, world, events, p, filename, output, ioCommand, ioIdle)
+	events <- StateChange{p.Turns, Quitting}
+	close(events)
 
 }
 
