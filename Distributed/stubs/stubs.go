@@ -1,11 +1,11 @@
 package stubs
 
-import "fmt"
+// import "fmt"
 
-type Event interface {
-	fmt.Stringer
-	GetCompletedTurns() int
-}
+// type Event interface {
+// 	fmt.Stringer
+// 	GetCompletedTurns() int
+// }
 
 var Nextworld = "NextStateOperation.Distributor"
 
@@ -17,5 +17,5 @@ type Request struct {
 	Message [][]uint8
 	Threads int
 	Turns   int
-	Events  chan<- Event
+	// Events  chan<- Event
 }

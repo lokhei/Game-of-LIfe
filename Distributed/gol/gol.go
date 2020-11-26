@@ -1,8 +1,8 @@
 package gol
 
 import (
+	"fmt"
 	"flag"
-	"log"
 	"net/rpc"
 	"strconv"
 	"strings"
@@ -19,24 +19,47 @@ type Params struct {
 	ImageHeight int
 }
 
-func makeCall(client rpc.Client, world [][]byte, events chan<- Event, p Params, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+func makeCall( events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+	
+	server := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
+	flag.Parse()
+	client, err := rpc.Dial("tcp", *server)
+	if err != nil{
+		fmt.Println("RPC client returned error:")
+		fmt.Println(err)
+		fmt.Println("stopping connection")
+	}
+	defer client.Close()
+	
+	ioCommand <- ioInput
+	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+
+	world := make([][]byte, p.ImageHeight)
+	for i := range world {
+		world[i] = make([]byte, p.ImageWidth)
+	}
+
+	for i := range world {
+		for j := range world {
+			world[i][j] = <-input
+		}
+	}
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
 	client.Call(stubs.Nextworld, request, response)
+	// fmt.Println(request.Message)
+	fmt.Println(response.Message)
+
+	
+	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
+	events <- StateChange{p.Turns, Quitting}
+	close(events)
+	
 }
 
 // Run starts the processing of Game of Life. It should initialise channels and goroutines.
 func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
-
-	server := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
-	flag.Parse()
-	client, err := rpc.Dial("tcp", *server)
-	if err != nil {
-		log.Fatal("dialing:", err)
-
-	}
-	defer client.Close()
 
 	ioCommand := make(chan ioCommand)
 	ioIdle := make(chan bool)
@@ -53,23 +76,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	}
 	go startIo(p, ioChannels)
 
-	ioCommand <- ioInput
-	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
-
-	world := make([][]byte, p.ImageHeight)
-	for i := range world {
-		world[i] = make([]byte, p.ImageWidth)
-	}
-
-	for i := range world {
-		for j := range world {
-			world[i][j] = <-input
-		}
-	}
-	makeCall(*client, world, events, p, filename, output, ioCommand, ioIdle)
-	// events <- StateChange{p.Turns, Quitting}
-	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, world)}
-	close(events)
+	go makeCall(events, p, filename, input, output, ioCommand, ioIdle)
 
 }
 
@@ -83,7 +90,7 @@ func printBoard(p Params, world [][]byte, filename chan<- string, output chan<- 
 			output <- world[y][x]
 		}
 	}
-	// events <- ImageOutputComplete{CompletedTurns: p.Turns, Filename: fileName}
+	events <- ImageOutputComplete{CompletedTurns: p.Turns, Filename: fileName}
 	// Make sure that the Io has finished any output before exiting.
 	ioCommand <- ioCheckIdle
 	<-IoIdle

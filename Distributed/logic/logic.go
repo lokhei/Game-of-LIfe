@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"time"
-
+    "fmt"
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
 
@@ -24,19 +24,28 @@ import (
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
+
 func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
-	height := len(req.Message)
-	width := len(req.Message[0])
 
-	rem := mod(height, req.Threads)
-	splitThreads := height / req.Threads
+	distributor(req.Message, res.Message, req.Threads, req.Turns)
+	return
+}
 
-	world := req.Message
+func distributor(World [][]uint8, nextWorld [][]uint8, threads, turns int){
+	fmt.Println("hello")
+
+	height := len(World)
+	width := len(World[0])
+
+	rem := mod(height, threads)
+	splitThreads := height / threads
+
+	world := World
 
 	turn := 0
-	for turn = 0; turn <= req.Turns; turn++ {
+	for turn = 0; turn <= turns; turn++ {
 		if turn > 0 {
-			workerChannels := make([]chan [][]byte, req.Threads)
+			workerChannels := make([]chan [][]byte, threads)
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
 
@@ -60,8 +69,7 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 			world = tempWorld
 
 		}
-
-		// res.Message = world
+		nextWorld = world
 
 		// 	events <- TurnComplete{CompletedTurns: turn}
 		// 	for y := 0; y < height; y++ {
@@ -76,12 +84,6 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 
 		// 	}
 	}
-	res.Message = world
-
-	return
-	// c.events <- StateChange{turn, Quitting}
-	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
-	// close(c.events)
 }
 
 func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint8) {
