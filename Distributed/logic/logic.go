@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"net/rpc"
 	"time"
-    "fmt"
+
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
 
@@ -27,25 +28,22 @@ type NextStateOperation struct{}
 
 func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
 
-	distributor(req.Message, res.Message, req.Threads, req.Turns)
+	res.Message = distributor(req, res)
 	return
 }
 
-func distributor(World [][]uint8, nextWorld [][]uint8, threads, turns int){
+func distributor(req stubs.Request, res *stubs.Response) [][]byte {
 	fmt.Println("hello")
 
-	height := len(World)
-	width := len(World[0])
-
-	rem := mod(height, threads)
-	splitThreads := height / threads
-
-	world := World
-
+	height := len(req.Message)
+	width := len(req.Message[0])
+	world := req.Message
+	rem := mod(height, req.Threads)
+	splitThreads := height / req.Threads
 	turn := 0
-	for turn = 0; turn <= turns; turn++ {
+	for turn = 0; turn <= req.Turns; turn++ {
 		if turn > 0 {
-			workerChannels := make([]chan [][]byte, threads)
+			workerChannels := make([]chan [][]byte, req.Threads)
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
 
@@ -69,7 +67,6 @@ func distributor(World [][]uint8, nextWorld [][]uint8, threads, turns int){
 			world = tempWorld
 
 		}
-		nextWorld = world
 
 		// 	events <- TurnComplete{CompletedTurns: turn}
 		// 	for y := 0; y < height; y++ {
@@ -84,6 +81,7 @@ func distributor(World [][]uint8, nextWorld [][]uint8, threads, turns int){
 
 		// 	}
 	}
+	return world
 }
 
 func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint8) {

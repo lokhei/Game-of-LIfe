@@ -1,8 +1,8 @@
 package gol
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"net/rpc"
 	"strconv"
 	"strings"
@@ -19,18 +19,18 @@ type Params struct {
 	ImageHeight int
 }
 
-func makeCall( events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
-	
+func makeCall(events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+
 	server := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
 	flag.Parse()
 	client, err := rpc.Dial("tcp", *server)
-	if err != nil{
+	if err != nil {
 		fmt.Println("RPC client returned error:")
 		fmt.Println(err)
 		fmt.Println("stopping connection")
 	}
 	defer client.Close()
-	
+
 	ioCommand <- ioInput
 	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
@@ -48,14 +48,13 @@ func makeCall( events chan<- Event, p Params, filename chan<- string, input <-ch
 	response := new(stubs.Response)
 	client.Call(stubs.Nextworld, request, response)
 	// fmt.Println(request.Message)
-	fmt.Println(response.Message)
+	// fmt.Println(response.Message)
 
-	
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
 	close(events)
-	
+
 }
 
 // Run starts the processing of Game of Life. It should initialise channels and goroutines.
