@@ -19,11 +19,9 @@ type Params struct {
 	ImageHeight int
 }
 
-func makeCall(events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+func makeCall(server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
-	server := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
-	flag.Parse()
-	client, err := rpc.Dial("tcp", *server)
+	client, err := rpc.Dial("tcp", server)
 	if err != nil {
 		fmt.Println("RPC client returned error:")
 		fmt.Println(err)
@@ -60,6 +58,16 @@ func makeCall(events chan<- Event, p Params, filename chan<- string, input <-cha
 // Run starts the processing of Game of Life. It should initialise channels and goroutines.
 func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 
+	var server string
+
+	if flag.Lookup("server") == nil {
+		serverTemp := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
+		flag.Parse()
+		server = *serverTemp
+	} else {
+		server = flag.Lookup("server").Value.(flag.Getter).Get().(string)
+	}
+
 	ioCommand := make(chan ioCommand)
 	ioIdle := make(chan bool)
 	filename := make(chan string)
@@ -75,7 +83,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	}
 	go startIo(p, ioChannels)
 
-	go makeCall(events, p, filename, input, output, ioCommand, ioIdle)
+	go makeCall(server, events, p, filename, input, output, ioCommand, ioIdle)
 
 }
 
