@@ -67,7 +67,8 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 		}
 	}
 	makeCall(*client, world, events, p, filename, output, ioCommand, ioIdle)
-	events <- StateChange{p.Turns, Quitting}
+	// events <- StateChange{p.Turns, Quitting}
+	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, world)}
 	close(events)
 
 }
@@ -82,7 +83,7 @@ func printBoard(p Params, world [][]byte, filename chan<- string, output chan<- 
 			output <- world[y][x]
 		}
 	}
-	events <- ImageOutputComplete{CompletedTurns: p.Turns, Filename: fileName}
+	// events <- ImageOutputComplete{CompletedTurns: p.Turns, Filename: fileName}
 	// Make sure that the Io has finished any output before exiting.
 	ioCommand <- ioCheckIdle
 	<-IoIdle
