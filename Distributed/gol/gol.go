@@ -49,12 +49,13 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 
 	periodicChan := make(chan bool)
 	go ticker(periodicChan)
-	for <-periodicChan {
+	select {
+	case <-periodicChan:
 		fmt.Println("hi")
 		events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
+	default:
 	}
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
-
 
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}

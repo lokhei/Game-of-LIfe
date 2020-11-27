@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
-	"uk.ac.bris.cs/gameoflife/util"
 )
 
 // type distributorChannels struct {
@@ -25,14 +24,15 @@ import (
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
-
 func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
 
 	height := len(req.Message)
 	width := len(req.Message[0])
 	rem := mod(height, req.Threads)
 	splitThreads := height / req.Threads
-	
+
+	world := req.Message
+
 	res.Turns = 0
 	for res.Turns = 0; res.Turns <= req.Turns; res.Turns++ {
 		if res.Turns > 0 {
@@ -48,7 +48,7 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 					endY = (i + 1) * (splitThreads + 1)
 				}
 
-				go worker(height, width, startY, endY, req.Message, workerChannels[i])
+				go worker(height, width, startY, endY, world, workerChannels[i])
 
 			}
 
@@ -58,8 +58,12 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 				tempWorld = append(tempWorld, workerResults...)
 			}
 			res.Message = tempWorld
+			world = tempWorld
+
 		}
+
 	}
+	res.Message = world
 	return
 }
 
