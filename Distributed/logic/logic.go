@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 // type distributorChannels struct {
@@ -26,21 +27,15 @@ type NextStateOperation struct{}
 // Distributor divides the work between workers and interacts with other goroutines.
 
 func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
-	res.Message = distributor(req, res)
-	return
-}
-
-func distributor(req stubs.Request, res *stubs.Response) [][]byte {
 
 	height := len(req.Message)
 	width := len(req.Message[0])
-	world := req.Message
 	rem := mod(height, req.Threads)
 	splitThreads := height / req.Threads
-	turn := 0
-	for turn = 0; turn <= req.Turns; turn++ {
-		res.Turns = turn
-		if turn > 0 {
+	
+	res.Turns = 0
+	for res.Turns = 0; res.Turns <= req.Turns; res.Turns++ {
+		if res.Turns > 0 {
 			workerChannels := make([]chan [][]byte, req.Threads)
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
@@ -53,7 +48,7 @@ func distributor(req stubs.Request, res *stubs.Response) [][]byte {
 					endY = (i + 1) * (splitThreads + 1)
 				}
 
-				go worker(height, width, startY, endY, world, workerChannels[i])
+				go worker(height, width, startY, endY, req.Message, workerChannels[i])
 
 			}
 
@@ -62,31 +57,37 @@ func distributor(req stubs.Request, res *stubs.Response) [][]byte {
 				workerResults := <-workerChannels[i]
 				tempWorld = append(tempWorld, workerResults...)
 			}
-			world = tempWorld
-
+			res.Message = tempWorld
 		}
-
-		// 	events <- TurnComplete{CompletedTurns: turn}
-		// 	for y := 0; y < height; y++ {
-		// 		for x := 0; x < width; x++ {
-		// 			if world[y][x] == alive {
-		// 				events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
-		// 			}
-		// 		}
-		// 	}
-		// 	if turn == turnNum {
-		// 		events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
-
-		// 	}
 	}
-	return world
+	return
 }
 
 func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint8) {
 	newData := calculateNextState(height, width, startY, endY, world)
 	out <- newData
-
 }
+
+func ticker(aliveChan chan bool) {
+	for {
+		time.Sleep(2 * time.Second)
+		aliveChan <- true
+	}
+}
+
+// func calculateAliveCells(height, width int, world [][]uint8) []util.Cell {
+// 	aliveCells := []util.Cell{}
+
+// 	for y := 0; y < height; y++ {
+// 		for x := 0; x < width; x++ {
+// 			if world[y][x] == 255 {
+// 				aliveCells = append(aliveCells, util.Cell{X: x, Y: y})
+// 			}
+// 		}
+// 	}
+
+// 	return aliveCells
+// }
 
 ////////////
 const alive = 255

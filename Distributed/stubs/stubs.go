@@ -10,8 +10,8 @@ package stubs
 var Nextworld = "NextStateOperation.Distributor"
 
 type Response struct {
-	Message [][]uint8
-	Turns   int
+	Message     [][]uint8
+	Turns       int
 }
 
 type Request struct {

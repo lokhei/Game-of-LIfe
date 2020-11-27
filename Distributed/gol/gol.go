@@ -45,24 +45,19 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 	}
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
+	client.Call(stubs.Nextworld, request, response)
 
 	periodicChan := make(chan bool)
 	go ticker(periodicChan)
-	if <-periodicChan {
+	for <-periodicChan {
 		fmt.Println("hi")
-
-		client.Call(stubs.Nextworld, request, response)
-		fmt.Println("hi", response)
 		events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
-
-	} else {
-		client.Call(stubs.Nextworld, request, response)
 	}
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
+
+
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
-	close(periodicChan)
-
 	close(events)
 
 }

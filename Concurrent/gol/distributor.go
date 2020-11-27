@@ -166,7 +166,7 @@ func ticker(aliveChan chan bool) {
 		time.Sleep(2 * time.Second)
 		aliveChan <- true
 	}
-}
+} 
 
 func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	c.ioCommand <- ioOutput
