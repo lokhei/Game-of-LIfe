@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"time"
+
 	// "fmt"
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -22,7 +23,8 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 	splitThreads := height / req.Threads
 
 	world := req.Message
-
+	periodicChan := make(chan bool)
+	go ticker(periodicChan)
 	res.Turns = 0
 	for res.Turns = 0; res.Turns <= req.Turns; res.Turns++ {
 		if res.Turns > 0 {
@@ -50,11 +52,8 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 			res.Message = tempWorld
 			world = tempWorld
 
-
-			periodicChan := make(chan bool)
-			go ticker(periodicChan)
-			select{
-			case <- periodicChan:
+			select {
+			case <-periodicChan:
 				return
 			default:
 			}
