@@ -7,19 +7,9 @@ import (
 	"net"
 	"net/rpc"
 	"time"
-
+	// "fmt"
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
-
-// type distributorChannels struct {
-// 	events     chan<- Event
-// 	ioCommand  chan<- ioCommand
-// 	ioIdle     <-chan bool
-// 	filename   chan<- string
-// 	input      <-chan uint8
-// 	output     chan<- uint8
-// 	keyPresses <-chan rune
-// }
 
 type NextStateOperation struct{}
 
@@ -60,6 +50,15 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 			res.Message = tempWorld
 			world = tempWorld
 
+
+			periodicChan := make(chan bool)
+			go ticker(periodicChan)
+			select{
+			case <- periodicChan:
+				return
+			default:
+			}
+
 		}
 
 	}
@@ -78,20 +77,6 @@ func ticker(aliveChan chan bool) {
 		aliveChan <- true
 	}
 }
-
-// func calculateAliveCells(height, width int, world [][]uint8) []util.Cell {
-// 	aliveCells := []util.Cell{}
-
-// 	for y := 0; y < height; y++ {
-// 		for x := 0; x < width; x++ {
-// 			if world[y][x] == 255 {
-// 				aliveCells = append(aliveCells, util.Cell{X: x, Y: y})
-// 			}
-// 		}
-// 	}
-
-// 	return aliveCells
-// }
 
 ////////////
 const alive = 255

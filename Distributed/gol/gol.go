@@ -47,14 +47,23 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 	response := new(stubs.Response)
 	client.Call(stubs.Nextworld, request, response)
 
-	periodicChan := make(chan bool)
-	go ticker(periodicChan)
-	select {
-	case <-periodicChan:
-		fmt.Println("hi")
-		events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
-	default:
+	for{
+		if(response.Turns != request.Turns){
+			events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
+
+			requestAgain := stubs.Request{Message: response.Message, Threads: p.Threads, Turns: p.Turns-response.Turns}
+			responseAgain := new(stubs.Response)
+			client.Call(stubs.Nextworld, requestAgain, responseAgain)
+		}else{break}
 	}
+	// periodicChan := make(chan bool)
+	// go ticker(periodicChan)
+	// select {
+	// case <-periodicChan:
+	// 	fmt.Println("hi")
+	// 	events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
+	// default:
+	// }
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
 
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
@@ -105,6 +114,7 @@ func printBoard(p Params, world [][]byte, filename chan<- string, output chan<- 
 			output <- world[y][x]
 		}
 	}
+	
 	events <- ImageOutputComplete{CompletedTurns: p.Turns, Filename: fileName}
 	// Make sure that the Io has finished any output before exiting.
 	ioCommand <- ioCheckIdle
