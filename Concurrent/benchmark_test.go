@@ -30,3 +30,25 @@ func Benchmark(b *testing.B) {
 		}
 	})
 }
+
+
+
+
+// func Benchmark(b *testing.B) {
+// 	os.Stdout = nil // Disable all program output apart from benchmark results
+// 	tests := []gol.Params{
+// 		{ImageWidth: 16, ImageHeight: 16},
+// 		{ImageWidth: 64, ImageHeight: 64},
+// 		{ImageWidth: 512, ImageHeight: 512},
+// 	}
+// 	b.Run("benchmark", func(b *testing.B) {
+// 		// for i := 0; i < b.N; i++ {
+// 		for _, p := range tests {
+// 			for threads := 1; threads <= 16; threads++ {
+// 				p.Threads = threads
+// 				events := make(chan gol.Event)
+// 				gol.Run(p, events, nil)
+// 			}
+// 		}
+// 	})
+// }

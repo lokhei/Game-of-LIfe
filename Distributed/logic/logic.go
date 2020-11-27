@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -27,13 +26,11 @@ type NextStateOperation struct{}
 // Distributor divides the work between workers and interacts with other goroutines.
 
 func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
-
 	res.Message = distributor(req, res)
 	return
 }
 
 func distributor(req stubs.Request, res *stubs.Response) [][]byte {
-	fmt.Println("hello")
 
 	height := len(req.Message)
 	width := len(req.Message[0])
@@ -42,6 +39,7 @@ func distributor(req stubs.Request, res *stubs.Response) [][]byte {
 	splitThreads := height / req.Threads
 	turn := 0
 	for turn = 0; turn <= req.Turns; turn++ {
+		res.Turns = turn
 		if turn > 0 {
 			workerChannels := make([]chan [][]byte, req.Threads)
 			for i := range workerChannels {

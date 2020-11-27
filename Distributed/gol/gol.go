@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"strconv"
 	"strings"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 	"uk.ac.bris.cs/gameoflife/util"
@@ -44,13 +45,24 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 	}
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
-	client.Call(stubs.Nextworld, request, response)
-	// fmt.Println(request.Message)
-	// fmt.Println(response.Message)
 
+	periodicChan := make(chan bool)
+	go ticker(periodicChan)
+	if <-periodicChan {
+		fmt.Println("hi")
+
+		client.Call(stubs.Nextworld, request, response)
+		fmt.Println("hi", response)
+		events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
+
+	} else {
+		client.Call(stubs.Nextworld, request, response)
+	}
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
+	close(periodicChan)
+
 	close(events)
 
 }
@@ -116,4 +128,11 @@ func calculateAliveCells(p Params, world [][]uint8) []util.Cell {
 	}
 
 	return aliveCells
+}
+
+func ticker(aliveChan chan bool) {
+	for {
+		time.Sleep(2 * time.Second)
+		aliveChan <- true
+	}
 }
