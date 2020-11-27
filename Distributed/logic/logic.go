@@ -23,11 +23,15 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 	splitThreads := height / req.Threads
 
 	world := req.Message
-	periodicChan := make(chan bool)
-	go ticker(periodicChan)
+	// periodicChan := make(chan bool)
+	// go ticker(periodicChan)
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	done := make(chan bool)
 	res.Turns = 0
-	for res.Turns = 0; res.Turns <= req.Turns; res.Turns++ {
-		if res.Turns > 0 {
+	for turns := 0; turns <= req.Turns; turns++ {
+		if turns > 0 {
+			res.Turns++
 			workerChannels := make([]chan [][]byte, req.Threads)
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
@@ -52,12 +56,27 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 			res.Message = tempWorld
 			world = tempWorld
 
-			select {
-			case <-periodicChan:
-				return
-			default:
-			}
+			// select {
+			// case <-periodicChan:
+			// 	return
+			// default:
+			// }
 
+			send := false
+			go func() {
+				for {
+					select {
+					case <-done:
+						return
+					case <-ticker.C:
+						send = true
+					}
+				}
+			}()
+			if send == true {
+				return
+
+			}
 		}
 
 	}
