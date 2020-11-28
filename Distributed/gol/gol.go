@@ -47,30 +47,24 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 	response := new(stubs.Response)
 	client.Call(stubs.Nextworld, request, response)
 
-	// turns := response.Turns
-	totalTurns := 0
+	totalTurns := response.Turns
+	count := 0
 
-	for {
-		if totalTurns != request.Turns {
+	for totalTurns != request.Turns {
+
+		if count != 0 {
 			totalTurns += response.Turns
-
-			events <- AliveCellsCount{totalTurns, len(calculateAliveCells(p, response.Message))}
-
-			requestAgain := stubs.Request{Message: response.Message, Threads: p.Threads, Turns: p.Turns - totalTurns}
-			responseAgain := new(stubs.Response)
-			client.Call(stubs.Nextworld, requestAgain, responseAgain)
-		} else {
-			break
 		}
+
+		events <- AliveCellsCount{totalTurns, len(calculateAliveCells(p, response.Message))}
+
+		requestAgain := stubs.Request{Message: response.Message, Threads: p.Threads, Turns: p.Turns - totalTurns}
+		responseAgain := new(stubs.Response)
+		client.Call(stubs.Nextworld, requestAgain, responseAgain)
+		count = 1
+
 	}
-	// periodicChan := make(chan bool)
-	// go ticker(periodicChan)
-	// select {
-	// case <-periodicChan:
-	// 	fmt.Println("hi")
-	// 	events <- AliveCellsCount{response.Turns, len(calculateAliveCells(p, response.Message))}
-	// default:
-	// }
+
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
 
 	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
