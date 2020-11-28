@@ -23,9 +23,10 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 	splitThreads := height / req.Threads
 
 	world := req.Message
-	periodicChan := make(chan bool)
-	go ticker(periodicChan)
-
+	// periodicChan := make(chan bool)
+	// go ticker(periodicChan)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	done := make(chan bool)
 	res.Turns = 0
 	for turns := 0; turns <= req.Turns; turns++ {
 		if turns > 0 {
@@ -54,10 +55,28 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 			res.Message = tempWorld
 			world = tempWorld
 
-			select {
-			case <-periodicChan:
+			// select {
+			// case <-periodicChan:
+			// 	return
+			// default:
+			// }
+			send := false
+
+			go func() {
+				for {
+					select {
+					case <-done:
+						return
+					case <-ticker.C:
+						send = true
+					}
+				}
+			}()
+
+			if send {
+				ticker.Stop()
+				done <- true
 				return
-			default:
 			}
 
 		}
@@ -72,12 +91,12 @@ func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint
 	out <- newData
 }
 
-func ticker(aliveChan chan bool) {
-	for {
-		time.Sleep(2 * time.Second)
-		aliveChan <- true
-	}
-}
+// func ticker(aliveChan chan bool) {
+// 	for {
+// 		time.Sleep(2 * time.Second)
+// 		aliveChan <- true
+// 	}
+// }
 
 ////////////
 const alive = 255
