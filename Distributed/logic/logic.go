@@ -22,13 +22,14 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 	rem := mod(height, req.Threads)
 	splitThreads := height / req.Threads
 
-	world := req.Message
-	// periodicChan := make(chan bool)
-	// go ticker(periodicChan)
-	ticker := time.NewTicker(500 * time.Millisecond)
-	done := make(chan bool)
+	res.Message = req.Message
+	periodicChan := make(chan bool)
+	go ticker(periodicChan)
+
 	res.Turns = 0
 	for turns := 0; turns <= req.Turns; turns++ {
+		// res.Message = req.Message
+
 		if turns > 0 {
 			res.Turns++
 			workerChannels := make([]chan [][]byte, req.Threads)
@@ -43,7 +44,7 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 					endY = (i + 1) * (splitThreads + 1)
 				}
 
-				go worker(height, width, startY, endY, world, workerChannels[i])
+				go worker(height, width, startY, endY, res.Message, workerChannels[i])
 
 			}
 
@@ -53,36 +54,18 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 				tempWorld = append(tempWorld, workerResults...)
 			}
 			res.Message = tempWorld
-			world = tempWorld
+			// world = tempWorld
 
-			// select {
-			// case <-periodicChan:
-			// 	return
-			// default:
-			// }
-			send := false
-
-			go func() {
-				for {
-					select {
-					case <-done:
-						return
-					case <-ticker.C:
-						send = true
-					}
-				}
-			}()
-
-			if send {
-				ticker.Stop()
-				done <- true
+			select {
+			case <-periodicChan:
 				return
+
+			default:
 			}
 
 		}
 
 	}
-	res.Message = world
 	return
 }
 
@@ -91,12 +74,12 @@ func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint
 	out <- newData
 }
 
-// func ticker(aliveChan chan bool) {
-// 	for {
-// 		time.Sleep(2 * time.Second)
-// 		aliveChan <- true
-// 	}
-// }
+func ticker(aliveChan chan bool) {
+	for {
+		time.Sleep(2 * time.Second)
+		aliveChan <- true
+	}
+}
 
 ////////////
 const alive = 255
@@ -124,9 +107,9 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
 func calculateNextState(height, width, startY, endY int, world [][]byte) [][]byte {
 	//makes a new world
-	newWorld := make([][]uint8, endY-startY)
+	newWorld := make([][]byte, endY-startY)
 	for i := range newWorld {
-		newWorld[i] = make([]uint8, width)
+		newWorld[i] = make([]byte, width)
 	}
 	//sets cells to dead or alive according to num of neighbours
 	for y := startY; y < endY; y++ {

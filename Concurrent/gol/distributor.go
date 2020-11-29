@@ -62,36 +62,13 @@ func distributor(p Params, c distributorChannels) {
 					endY = (i + 1) * (splitThreads + 1)
 
 				}
-				size := endY - startY + 2
 
-				subworld := make([][]byte, size)
-				for k := range subworld {
-					subworld[k] = make([]byte, p.ImageWidth)
-				}
-				if i != 0 && i != p.Threads-1 { // not equal to first or last worker
-					go worker(p, startY, endY, world[startY-1:endY+1], workerChannels[i])
-					continue
-
-				} else if i == 0 { //first worker
-					subworld[0] = world[p.ImageHeight-1]
-					if p.Threads == 1 {
-						subworld[size-1] = world[0]
-						size--
-
-					}
-					for j := 1; j < size; j++ {
-						subworld[j] = world[j-1]
-
-					}
-				} else { //last worker
-
-					for j := 0; j < size-1; j++ {
-						subworld[j] = world[startY+j-1]
-					}
-					subworld[size-1] = world[0]
+				if i < rem {
+					startY = i * (splitThreads + 1)
+					endY = (i + 1) * (splitThreads + 1)
 				}
 
-				go worker(p, startY, endY, subworld, workerChannels[i])
+				go worker(p, startY, endY, world, workerChannels[i])
 
 			}
 
@@ -166,7 +143,7 @@ func ticker(aliveChan chan bool) {
 		time.Sleep(2 * time.Second)
 		aliveChan <- true
 	}
-} 
+}
 
 func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	c.ioCommand <- ioOutput

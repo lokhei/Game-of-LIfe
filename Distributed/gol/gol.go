@@ -47,27 +47,25 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 	response := new(stubs.Response)
 	client.Call(stubs.Nextworld, request, response)
 
+	world = response.Message
+
 	totalTurns := response.Turns
-	count := 0
 
-	for totalTurns != request.Turns {
+	for totalTurns < request.Turns {
 
-		if count != 0 {
-			totalTurns += response.Turns
-		}
+		events <- AliveCellsCount{totalTurns, len(calculateAliveCells(p, world))}
 
-		events <- AliveCellsCount{totalTurns, len(calculateAliveCells(p, response.Message))}
-
-		requestAgain := stubs.Request{Message: response.Message, Threads: p.Threads, Turns: p.Turns - totalTurns}
+		requestAgain := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns - totalTurns} //40 30 20 10
 		responseAgain := new(stubs.Response)
 		client.Call(stubs.Nextworld, requestAgain, responseAgain)
-		count = 1
+		totalTurns += responseAgain.Turns
+		world = responseAgain.Message
 
 	}
 
-	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, response.Message)}
+	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, world)}
 
-	printBoard(p, response.Message, filename, output, ioCommand, ioIdle, events)
+	printBoard(p, world, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
 	close(events)
 
