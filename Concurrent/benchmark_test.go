@@ -17,20 +17,16 @@ func Benchmark(b *testing.B) {
 		{ImageWidth: 512, ImageHeight: 512, Turns: 10000000000000},
 	}
 	for _, test := range tests {
-		test.Threads = 1
 
-		name := strings.Join([]string{strconv.Itoa(test.ImageWidth), strconv.Itoa(test.ImageHeight), strconv.Itoa(test.Turns), strconv.Itoa(test.Threads)}, "x")
-		b.Run(name, func(b *testing.B) {
+		for thread := 1; thread <= 16; thread++ {
+			test.Threads = thread
+			name := strings.Join([]string{strconv.Itoa(test.ImageWidth), strconv.Itoa(test.ImageHeight), strconv.Itoa(test.Turns), strconv.Itoa(test.Threads)}, "x")
+			b.Run(name, func(b *testing.B) {
 
-			events := make(chan gol.Event)
-			gol.Run(test, events, nil)
-		})
-		test.Threads = 16
-		name = strings.Join([]string{strconv.Itoa(test.ImageWidth), strconv.Itoa(test.ImageHeight), strconv.Itoa(test.Turns), strconv.Itoa(test.Threads)}, "x")
-		b.Run(name, func(b *testing.B) {
+				events := make(chan gol.Event)
+				gol.Run(test, events, nil)
+			})
 
-			events := make(chan gol.Event)
-			gol.Run(test, events, nil)
-		})
+		}
 	}
 }

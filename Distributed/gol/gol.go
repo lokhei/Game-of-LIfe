@@ -51,11 +51,11 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 
 	totalTurns := response.Turns
 
-	for totalTurns < request.Turns {
+	for totalTurns != request.Turns {
 
 		events <- AliveCellsCount{totalTurns, len(calculateAliveCells(p, world))}
 
-		requestAgain := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns - totalTurns} //40 30 20 10
+		requestAgain := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns - totalTurns}
 		responseAgain := new(stubs.Response)
 		client.Call(stubs.Nextworld, requestAgain, responseAgain)
 		totalTurns += responseAgain.Turns

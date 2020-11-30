@@ -28,8 +28,6 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 
 	res.Turns = 0
 	for turns := 0; turns <= req.Turns; turns++ {
-		// res.Message = req.Message
-
 		if turns > 0 {
 			res.Turns++
 			workerChannels := make([]chan [][]byte, req.Threads)
@@ -54,9 +52,9 @@ func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response)
 				tempWorld = append(tempWorld, workerResults...)
 			}
 			res.Message = tempWorld
-			// world = tempWorld
 
 			select {
+
 			case <-periodicChan:
 				return
 
