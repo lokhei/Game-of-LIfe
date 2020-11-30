@@ -20,7 +20,7 @@ type Params struct {
 	ImageHeight int
 }
 
-func makeCall(server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
 	client, err := rpc.Dial("tcp", server)
 	if err != nil {
@@ -43,29 +43,70 @@ func makeCall(server string, events chan<- Event, p Params, filename chan<- stri
 			world[i][j] = <-input
 		}
 	}
-	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
+
+	request := stubs.Request{
+		Message: world, Threads: p.Threads,
+		Turns: p.Turns}
 	response := new(stubs.Response)
-	client.Call(stubs.Nextworld, request, response)
+	client.Call(stubs.CallInitial, request, response)
 
-	world = response.Message
+	ticker := time.NewTicker(2 * time.Second)
+	done := make(chan bool)
 
-	totalTurns := response.Turns
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				requestAlive := stubs.Request{}
+				responseAlive := new(stubs.Response)
+				client.Call(stubs.CallAlive, requestAlive, responseAlive)
+				events <- AliveCellsCount{CompletedTurns: responseAlive.Turn, CellsCount: responseAlive.AliveCells}
+			}
+		}
+	}()
 
-	for totalTurns != request.Turns {
+	for {
+		select {
+		case key := <-keyPresses:
+			if key == 's' {
+				reqKey := stubs.Request{}
+				resKey := new(stubs.Response)
+				client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+				printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
 
-		events <- AliveCellsCount{totalTurns, len(calculateAliveCells(p, world))}
+			}
+			//  else if key == 'q' {
+			// 	printBoard(p, c, world, turn)
+			// 	c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
+			// 	close(c.events)
+			// 	return
 
-		requestAgain := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns - totalTurns}
-		responseAgain := new(stubs.Response)
-		client.Call(stubs.Nextworld, requestAgain, responseAgain)
-		totalTurns += responseAgain.Turns
-		world = responseAgain.Message
+			// } else if key == 'p' {
+			// 	fmt.Println(turn)
+			// 	c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
+			// 	for {
+			// 		tempKey := <-c.keyPresses
+			// 		if tempKey == 'p' {
+			// 			fmt.Println("Continuing")
+			// 			c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
+			// 			break
+			// 		}
+			// 	}
+			// }
+		}
 
 	}
 
-	events <- FinalTurnComplete{p.Turns, calculateAliveCells(p, world)}
+	requestFinal := stubs.Request{}
+	responseFinal := new(stubs.Response)
+	client.Call(stubs.CallReturn, requestFinal, responseFinal)
+	returnedworld := responseFinal.Message
+	ticker.Stop()
 
-	printBoard(p, world, filename, output, ioCommand, ioIdle, events)
+	events <- FinalTurnComplete{p.Turns, calculateAliveCells(returnedworld)}
+	printBoard(p, p.Turns, returnedworld, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
 	close(events)
 
@@ -99,13 +140,13 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	}
 	go startIo(p, ioChannels)
 
-	go makeCall(server, events, p, filename, input, output, ioCommand, ioIdle)
+	go makeCall(keyPresses, server, events, p, filename, input, output, ioCommand, ioIdle)
 
 }
 
-func printBoard(p Params, world [][]byte, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, IoIdle <-chan bool, events chan<- Event) {
+func printBoard(p Params, turn int, world [][]byte, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, IoIdle <-chan bool, events chan<- Event) {
 	ioCommand <- ioOutput
-	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(p.Turns)}, "x")
+	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
 	filename <- fileName
 
 	for y := range world {
@@ -114,18 +155,18 @@ func printBoard(p Params, world [][]byte, filename chan<- string, output chan<- 
 		}
 	}
 
-	events <- ImageOutputComplete{CompletedTurns: p.Turns, Filename: fileName}
+	events <- ImageOutputComplete{CompletedTurns: turn, Filename: fileName}
 	// Make sure that the Io has finished any output before exiting.
 	ioCommand <- ioCheckIdle
 	<-IoIdle
 }
 
 // takes the world as input and returns the (x, y) coordinates of all the cells that are alive.
-func calculateAliveCells(p Params, world [][]uint8) []util.Cell {
+func calculateAliveCells(world [][]uint8) []util.Cell {
 	aliveCells := []util.Cell{}
 
-	for y := 0; y < p.ImageHeight; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
+	for y := 0; y < len(world); y++ {
+		for x := 0; x < len(world[0]); x++ {
 			if world[y][x] == 255 {
 				aliveCells = append(aliveCells, util.Cell{X: x, Y: y})
 			}

@@ -7,16 +7,23 @@ package stubs
 // 	GetCompletedTurns() int
 // }
 
-var Nextworld = "NextStateOperation.Distributor"
+var CallInitial = "NextStateOperation.InitialState"
+var CallReturn = "NextStateOperation.FinalState"
+var CallAlive = "NextStateOperation.Alive"
+var CallDoKeypresses = "NextStateOperation.DoKeypresses"
+
 
 type Response struct {
-	Message     [][]uint8
-	Turns       int
+	AliveCells int
+	Message    [][]uint8
+	Turn       int
+	Done       bool
 }
 
 type Request struct {
-	Message [][]uint8
-	Threads int
-	Turns   int
+	Message  [][]uint8
+	Threads  int
+	Turns    int
+	Keypress rune
 	// Events  chan<- Event
 }

@@ -8,63 +8,69 @@ import (
 	"net/rpc"
 	"time"
 
-	// "fmt"
+	"fmt"
+
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
+
+var FinalWorld [][]uint8
+var CurrentWorld [][]uint8
+var AliveCells int
+var Currentturn int
+var done bool
 
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
-func (s *NextStateOperation) Distributor(req stubs.Request, res *stubs.Response) (err error) {
+func distributor(world [][]uint8, turns, threads int) {
+	done = false
+	World := world
+	height := len(World)
+	width := len(World[0])
+	rem := mod(height, threads)
+	splitThreads := height / threads
 
-	height := len(req.Message)
-	width := len(req.Message[0])
-	rem := mod(height, req.Threads)
-	splitThreads := height / req.Threads
-
-	res.Message = req.Message
-	periodicChan := make(chan bool)
-	go ticker(periodicChan)
-
-	res.Turns = 0
-	for turns := 0; turns <= req.Turns; turns++ {
-		if turns > 0 {
-			res.Turns++
-			workerChannels := make([]chan [][]byte, req.Threads)
-			for i := range workerChannels {
-				workerChannels[i] = make(chan [][]byte)
-
-				startY := i*splitThreads + rem
-				endY := (i+1)*splitThreads + rem
-
-				if i < rem {
-					startY = i * (splitThreads + 1)
-					endY = (i + 1) * (splitThreads + 1)
-				}
-
-				go worker(height, width, startY, endY, res.Message, workerChannels[i])
-
+	AliveCells = 0
+	for h := 0; h < height; h++ {
+		for g := 0; g < width; g++ {
+			if World[h][g] == alive {
+				AliveCells++
 			}
+		}
+	}
 
-			tempWorld := make([][]byte, 0)
-			for i := range workerChannels { // collects the resulting parts into a single 2D slice
-				workerResults := <-workerChannels[i]
-				tempWorld = append(tempWorld, workerResults...)
+	for Currentturn = 0; Currentturn < turns; Currentturn++ {
+		workerChannels := make([]chan [][]uint8, threads)
+		for i := range workerChannels {
+			workerChannels[i] = make(chan [][]uint8)
+			startY := i*splitThreads + rem
+			endY := (i+1)*splitThreads + rem
+
+			if i < rem {
+				startY = i * (splitThreads + 1)
+				endY = (i + 1) * (splitThreads + 1)
 			}
-			res.Message = tempWorld
-
-			select {
-
-			case <-periodicChan:
-				return
-
-			default:
-			}
-
+			go worker(height, width, startY, endY, World, workerChannels[i])
 		}
 
+		tempWorld := make([][]uint8, 0)
+		for i := range workerChannels { // collects the resulting parts into a single 2D slice
+			workerResults := <-workerChannels[i]
+			tempWorld = append(tempWorld, workerResults...)
+		}
+		World = tempWorld
+		CurrentWorld = World
+		AliveCells = 0
+		for h := 0; h < height; h++ {
+			for g := 0; g < width; g++ {
+				if World[h][g] == alive {
+					AliveCells++
+				}
+			}
+		}
 	}
-	return
+	FinalWorld = World
+	done = true
 }
 
 func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint8) {
@@ -72,11 +78,39 @@ func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint
 	out <- newData
 }
 
-func ticker(aliveChan chan bool) {
-	for {
-		time.Sleep(2 * time.Second)
-		aliveChan <- true
+//Initial state of the world
+func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response) (err error) {
+	fmt.Println("Gamestate initialised")
+	World := req.Message
+	Turn := req.Turns
+	Threads := req.Threads
+	go distributor(World, Turn, Threads)
+	return
+}
+
+//Final state of the world
+func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) (err error) {
+	fmt.Println("Final Gamestate returned")
+	for done == false {
+		//
 	}
+	res.Message = FinalWorld
+	return
+}
+
+//Return current World + Turn for counting alive cells
+func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
+	fmt.Println("Return num of alive cells")
+	res.Turn = Currentturn
+	res.AliveCells = AliveCells
+	return
+}
+
+func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response) (err error) {
+	fmt.Println("Return num of alive cells")
+	res.Turn = Currentturn
+	res.Message = CurrentWorld
+	return
 }
 
 ////////////
