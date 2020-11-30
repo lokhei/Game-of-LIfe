@@ -17,6 +17,13 @@ var AliveCells int
 var Currentturn int
 var done bool
 
+const alive = 255
+const dead = 0
+
+func mod(x, m int) int {
+	return (x + m) % m
+}
+
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
@@ -37,7 +44,8 @@ func distributor(world [][]byte, turns, threads int) {
 		}
 	}
 
-	for Currentturn = 0; Currentturn < turns; Currentturn++ {
+	for turn := Currentturn; turn < turns; turn++ {
+		Currentturn++
 
 		workerChannels := make([]chan [][]byte, threads)
 		for i := range workerChannels {
@@ -77,7 +85,7 @@ func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]byte
 	out <- newData
 }
 
-//Initial state of the world
+//InitialState : Initial state of the world
 func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response) (err error) {
 	// fmt.Println("Gamestate initialised")
 	World := req.Message
@@ -87,7 +95,7 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 	return
 }
 
-//Final state of the world
+//FinalState : Final state of the world
 func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) (err error) {
 	// fmt.Println("Final Gamestate returned")
 	for done == false {
@@ -97,7 +105,7 @@ func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) 
 	return
 }
 
-//Return current World + Turn for counting alive cells
+//Alive : Return current World + Turn for counting alive cells
 func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
 	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
@@ -105,19 +113,12 @@ func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err 
 	return
 }
 
+// DoKeypresses : function for keypresses
 func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response) (err error) {
 	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
 	res.Message = CurrentWorld
 	return
-}
-
-////////////
-const alive = 255
-const dead = 0
-
-func mod(x, m int) int {
-	return (x + m) % m
 }
 
 //calculates number of neighbours of cell

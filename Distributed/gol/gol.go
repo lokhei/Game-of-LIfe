@@ -45,7 +45,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	}
 
 	//initial Call
-	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
+	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns, CurrentTurn: 0}
 	response := new(stubs.Response)
 	client.Call(stubs.CallInitial, request, response)
 
@@ -70,24 +70,30 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
 					printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
 				} else if key == 'q' {
-					// printBoard(p, c, world, turn)
-					// c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
-					// close(c.events)
-					// return
+					close(events)
+					secReq := stubs.Request{}
+					secRes := new(stubs.Response)
+					client.Call(stubs.CallDoKeypresses, secReq, secRes)
 
-					// } else if key == 'p' {
-					// 	fmt.Println(turn)
-					// 	c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
-					// 	for {
-					// 		tempKey := <-c.keyPresses
-					// 		if tempKey == 'p' {
-					// 			fmt.Println("Continuing")
-					// 			c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
-					// 			break
-					// 		}
-					// 	}
-					// }
 				}
+				// printBoard(p, c, world, turn)
+				// c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
+				// close(c.events)
+				// return
+
+				// } else if key == 'p' {
+				// 	fmt.Println(turn)
+				// 	c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
+				// 	for {
+				// 		tempKey := <-c.keyPresses
+				// 		if tempKey == 'p' {
+				// 			fmt.Println("Continuing")
+				// 			c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
+				// 			break
+				// 		}
+				// 	}
+				// }
+
 			}
 
 		}

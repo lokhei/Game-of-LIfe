@@ -13,8 +13,9 @@ type Response struct {
 }
 
 type Request struct {
-	Message  [][]byte
-	Threads  int
-	Turns    int
-	Keypress rune
+	Message     [][]byte
+	Threads     int
+	Turns       int
+	CurrentTurn int
+	Keypress    rune
 }
