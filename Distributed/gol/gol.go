@@ -44,12 +44,12 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 		}
 	}
 
-	request := stubs.Request{
-		Message: world, Threads: p.Threads,
-		Turns: p.Turns}
+	//initial Call
+	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
 	client.Call(stubs.CallInitial, request, response)
 
+	//ticker
 	ticker := time.NewTicker(2 * time.Second)
 	done := make(chan bool)
 
@@ -63,46 +63,42 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 				responseAlive := new(stubs.Response)
 				client.Call(stubs.CallAlive, requestAlive, responseAlive)
 				events <- AliveCellsCount{CompletedTurns: responseAlive.Turn, CellsCount: responseAlive.AliveCells}
+			case key := <-keyPresses:
+				if key == 's' {
+					reqKey := stubs.Request{}
+					resKey := new(stubs.Response)
+					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+					printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
+				} else if key == 'q' {
+					// printBoard(p, c, world, turn)
+					// c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
+					// close(c.events)
+					// return
+
+					// } else if key == 'p' {
+					// 	fmt.Println(turn)
+					// 	c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
+					// 	for {
+					// 		tempKey := <-c.keyPresses
+					// 		if tempKey == 'p' {
+					// 			fmt.Println("Continuing")
+					// 			c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
+					// 			break
+					// 		}
+					// 	}
+					// }
+				}
 			}
+
 		}
 	}()
 
-	for {
-		select {
-		case key := <-keyPresses:
-			if key == 's' {
-				reqKey := stubs.Request{}
-				resKey := new(stubs.Response)
-				client.Call(stubs.CallDoKeypresses, reqKey, resKey)
-				printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
-
-			}
-			//  else if key == 'q' {
-			// 	printBoard(p, c, world, turn)
-			// 	c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
-			// 	close(c.events)
-			// 	return
-
-			// } else if key == 'p' {
-			// 	fmt.Println(turn)
-			// 	c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
-			// 	for {
-			// 		tempKey := <-c.keyPresses
-			// 		if tempKey == 'p' {
-			// 			fmt.Println("Continuing")
-			// 			c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
-			// 			break
-			// 		}
-			// 	}
-			// }
-		}
-
-	}
-
+	//final message
 	requestFinal := stubs.Request{}
 	responseFinal := new(stubs.Response)
 	client.Call(stubs.CallReturn, requestFinal, responseFinal)
 	returnedworld := responseFinal.Message
+
 	ticker.Stop()
 
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(returnedworld)}
@@ -162,7 +158,7 @@ func printBoard(p Params, turn int, world [][]byte, filename chan<- string, outp
 }
 
 // takes the world as input and returns the (x, y) coordinates of all the cells that are alive.
-func calculateAliveCells(world [][]uint8) []util.Cell {
+func calculateAliveCells(world [][]byte) []util.Cell {
 	aliveCells := []util.Cell{}
 
 	for y := 0; y < len(world); y++ {
@@ -176,9 +172,9 @@ func calculateAliveCells(world [][]uint8) []util.Cell {
 	return aliveCells
 }
 
-func ticker(aliveChan chan bool) {
-	for {
-		time.Sleep(2 * time.Second)
-		aliveChan <- true
-	}
-}
+// func ticker(aliveChan chan bool) {
+// 	for {
+// 		time.Sleep(2 * time.Second)
+// 		aliveChan <- true
+// 	}
+// }

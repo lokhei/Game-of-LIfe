@@ -8,13 +8,11 @@ import (
 	"net/rpc"
 	"time"
 
-	"fmt"
-
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
 
-var FinalWorld [][]uint8
-var CurrentWorld [][]uint8
+var FinalWorld [][]byte
+var CurrentWorld [][]byte
 var AliveCells int
 var Currentturn int
 var done bool
@@ -22,7 +20,7 @@ var done bool
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
-func distributor(world [][]uint8, turns, threads int) {
+func distributor(world [][]byte, turns, threads int) {
 	done = false
 	World := world
 	height := len(World)
@@ -32,17 +30,18 @@ func distributor(world [][]uint8, turns, threads int) {
 
 	AliveCells = 0
 	for h := 0; h < height; h++ {
-		for g := 0; g < width; g++ {
-			if World[h][g] == alive {
+		for w := 0; w < width; w++ {
+			if World[h][w] == alive {
 				AliveCells++
 			}
 		}
 	}
 
 	for Currentturn = 0; Currentturn < turns; Currentturn++ {
-		workerChannels := make([]chan [][]uint8, threads)
+
+		workerChannels := make([]chan [][]byte, threads)
 		for i := range workerChannels {
-			workerChannels[i] = make(chan [][]uint8)
+			workerChannels[i] = make(chan [][]byte)
 			startY := i*splitThreads + rem
 			endY := (i+1)*splitThreads + rem
 
@@ -53,7 +52,7 @@ func distributor(world [][]uint8, turns, threads int) {
 			go worker(height, width, startY, endY, World, workerChannels[i])
 		}
 
-		tempWorld := make([][]uint8, 0)
+		tempWorld := make([][]byte, 0)
 		for i := range workerChannels { // collects the resulting parts into a single 2D slice
 			workerResults := <-workerChannels[i]
 			tempWorld = append(tempWorld, workerResults...)
@@ -73,14 +72,14 @@ func distributor(world [][]uint8, turns, threads int) {
 	done = true
 }
 
-func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]uint8) {
+func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]byte) {
 	newData := calculateNextState(height, width, startY, endY, world)
 	out <- newData
 }
 
 //Initial state of the world
 func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response) (err error) {
-	fmt.Println("Gamestate initialised")
+	// fmt.Println("Gamestate initialised")
 	World := req.Message
 	Turn := req.Turns
 	Threads := req.Threads
@@ -90,7 +89,7 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 
 //Final state of the world
 func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) (err error) {
-	fmt.Println("Final Gamestate returned")
+	// fmt.Println("Final Gamestate returned")
 	for done == false {
 		//
 	}
@@ -100,14 +99,14 @@ func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) 
 
 //Return current World + Turn for counting alive cells
 func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
-	fmt.Println("Return num of alive cells")
+	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
 	res.AliveCells = AliveCells
 	return
 }
 
 func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response) (err error) {
-	fmt.Println("Return num of alive cells")
+	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
 	res.Message = CurrentWorld
 	return
