@@ -32,50 +32,42 @@ type NextStateOperation struct{}
 func distributor(world [][]byte, turns, threads int) {
 	done = false
 
-	// World := world
 	height := len(world)
 	width := len(world[0])
 	rem := mod(height, threads)
 	splitThreads := height / threads
 
-	AliveCells = 0
-	for h := 0; h < height; h++ {
-		for w := 0; w < width; w++ {
-			if world[h][w] == alive {
-				AliveCells++
+	for turn := Currentturn; turn <= turns; turn++ {
+		if turn > 0 {
+			Currentturn++
+			for pause {
+
 			}
-		}
-	}
+			workerChannels := make([]chan [][]byte, threads)
+			for i := range workerChannels {
+				workerChannels[i] = make(chan [][]byte)
+				startY := i*splitThreads + rem
+				endY := (i+1)*splitThreads + rem
 
-	for turn := Currentturn; turn < turns; turn++ {
-		Currentturn++
-		for pause {
-
-		}
-		workerChannels := make([]chan [][]byte, threads)
-		for i := range workerChannels {
-			workerChannels[i] = make(chan [][]byte)
-			startY := i*splitThreads + rem
-			endY := (i+1)*splitThreads + rem
-
-			if i < rem {
-				startY = i * (splitThreads + 1)
-				endY = (i + 1) * (splitThreads + 1)
+				if i < rem {
+					startY = i * (splitThreads + 1)
+					endY = (i + 1) * (splitThreads + 1)
+				}
+				go worker(height, width, startY, endY, world, workerChannels[i])
 			}
-			go worker(height, width, startY, endY, world, workerChannels[i])
-		}
 
-		tempWorld := make([][]byte, 0)
-		for i := range workerChannels { // collects the resulting parts into a single 2D slice
-			workerResults := <-workerChannels[i]
-			tempWorld = append(tempWorld, workerResults...)
+			tempWorld := make([][]byte, 0)
+			for i := range workerChannels { // collects the resulting parts into a single 2D slice
+				workerResults := <-workerChannels[i]
+				tempWorld = append(tempWorld, workerResults...)
+			}
+			world = tempWorld
+			CurrentWorld = world
 		}
-		world = tempWorld
-		CurrentWorld = world
 		AliveCells = 0
 		for h := 0; h < height; h++ {
-			for g := 0; g < width; g++ {
-				if world[h][g] == alive {
+			for w := 0; w < width; w++ {
+				if world[h][w] == alive {
 					AliveCells++
 				}
 			}
