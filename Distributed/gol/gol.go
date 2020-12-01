@@ -52,6 +52,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	//ticker
 	ticker := time.NewTicker(2 * time.Second)
 	done := make(chan bool)
+	pause := false
 
 	go func() {
 		for {
@@ -59,10 +60,12 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 			case <-done:
 				return
 			case <-ticker.C:
-				requestAlive := stubs.Request{}
-				responseAlive := new(stubs.Response)
-				client.Call(stubs.CallAlive, requestAlive, responseAlive)
-				events <- AliveCellsCount{CompletedTurns: responseAlive.Turn, CellsCount: responseAlive.AliveCells}
+				if !pause {
+					requestAlive := stubs.Request{}
+					responseAlive := new(stubs.Response)
+					client.Call(stubs.CallAlive, requestAlive, responseAlive)
+					events <- AliveCellsCount{CompletedTurns: responseAlive.Turn, CellsCount: responseAlive.AliveCells}
+				}
 			case key := <-keyPresses:
 				if key == 's' {
 					reqKey := stubs.Request{}
@@ -71,34 +74,34 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
 				} else if key == 'q' {
 					close(events)
-					secReq := stubs.Request{}
-					secRes := new(stubs.Response)
-					client.Call(stubs.CallDoKeypresses, secReq, secRes)
-					// } else if key == 'p' {
-					// 	pause = true
-					// 	reqKey := stubs.Request{}
-					// 	resKey := new(stubs.Response)
-					// 	client.Call(stubs.KeypressPause, reqKey, resKey)
+					reqKey := stubs.Request{}
+					resKey := new(stubs.Response)
+					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+
+				} else if key == 'p' {
+					// pause = true
+					reqKey := stubs.Request{Pause: true}
+					pause = true
+					resKey := new(stubs.Response)
+					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+					events <- StateChange{CompletedTurns: resKey.Turn, NewState: Paused}
+					for {
+						key = <-keyPresses
+						if key == 'p' {
+							fmt.Println("Continuing")
+							events <- StateChange{CompletedTurns: resKey.Turn, NewState: Executing}
+
+							reqKey = stubs.Request{Pause: false}
+							resKey = new(stubs.Response)
+							pause = false
+							client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+							break
+
+						}
+
+					}
 
 				}
-				// } else if key == 'p' {
-				// 	pause = true
-				// 	reqKey := stubs.Request{}
-				// 	resKey := new(stubs.Response)
-				// 	client.Call(stubs.KeypressPause, reqKey, resKey)
-
-				// } else if key == 'p' {
-				// 	fmt.Println(turn)
-				// 	c.events <- StateChange{CompletedTurns: turn, NewState: Paused}
-				// 	for {
-				// 		tempKey := <-c.keyPresses
-				// 		if tempKey == 'p' {
-				// 			fmt.Println("Continuing")
-				// 			c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
-				// 			break
-				// 		}
-				// 	}
-				// }
 
 			}
 

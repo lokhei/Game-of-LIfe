@@ -17,6 +17,7 @@ var AliveCells int
 var Currentturn int
 var done bool
 var key bool
+var pause bool
 
 const alive = 255
 const dead = 0
@@ -48,7 +49,9 @@ func distributor(world [][]byte, turns, threads int) {
 
 	for turn := Currentturn; turn < turns; turn++ {
 		Currentturn++
+		for pause {
 
+		}
 		workerChannels := make([]chan [][]byte, threads)
 		for i := range workerChannels {
 			workerChannels[i] = make(chan [][]byte)
@@ -126,6 +129,7 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	res.Turn = Currentturn
 	res.Message = CurrentWorld
 	key = true
+	pause = req.Pause
 	return
 }
 

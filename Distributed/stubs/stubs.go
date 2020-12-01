@@ -4,7 +4,6 @@ var CallInitial = "NextStateOperation.InitialState"
 var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"
 var CallDoKeypresses = "NextStateOperation.DoKeypresses"
-var KeypressPause = "NextStateOperation.KeypressPause"
 
 type Response struct {
 	AliveCells int
@@ -18,4 +17,5 @@ type Request struct {
 	Threads  int
 	Turns    int
 	Keypress rune
+	Pause    bool
 }
