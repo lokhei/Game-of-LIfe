@@ -4,6 +4,7 @@ var CallInitial = "NextStateOperation.InitialState"
 var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"
 var CallDoKeypresses = "NextStateOperation.DoKeypresses"
+var KeypressPause = "NextStateOperation.KeypressPause"
 
 type Response struct {
 	AliveCells int
@@ -13,9 +14,8 @@ type Response struct {
 }
 
 type Request struct {
-	Message     [][]byte
-	Threads     int
-	Turns       int
-	CurrentTurn int
-	Keypress    rune
+	Message  [][]byte
+	Threads  int
+	Turns    int
+	Keypress rune
 }

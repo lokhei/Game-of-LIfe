@@ -16,6 +16,7 @@ var CurrentWorld [][]byte
 var AliveCells int
 var Currentturn int
 var done bool
+var key bool
 
 const alive = 255
 const dead = 0
@@ -29,16 +30,17 @@ type NextStateOperation struct{}
 // Distributor divides the work between workers and interacts with other goroutines.
 func distributor(world [][]byte, turns, threads int) {
 	done = false
-	World := world
-	height := len(World)
-	width := len(World[0])
+
+	// World := world
+	height := len(world)
+	width := len(world[0])
 	rem := mod(height, threads)
 	splitThreads := height / threads
 
 	AliveCells = 0
 	for h := 0; h < height; h++ {
 		for w := 0; w < width; w++ {
-			if World[h][w] == alive {
+			if world[h][w] == alive {
 				AliveCells++
 			}
 		}
@@ -57,7 +59,7 @@ func distributor(world [][]byte, turns, threads int) {
 				startY = i * (splitThreads + 1)
 				endY = (i + 1) * (splitThreads + 1)
 			}
-			go worker(height, width, startY, endY, World, workerChannels[i])
+			go worker(height, width, startY, endY, world, workerChannels[i])
 		}
 
 		tempWorld := make([][]byte, 0)
@@ -65,18 +67,18 @@ func distributor(world [][]byte, turns, threads int) {
 			workerResults := <-workerChannels[i]
 			tempWorld = append(tempWorld, workerResults...)
 		}
-		World = tempWorld
-		CurrentWorld = World
+		world = tempWorld
+		CurrentWorld = world
 		AliveCells = 0
 		for h := 0; h < height; h++ {
 			for g := 0; g < width; g++ {
-				if World[h][g] == alive {
+				if world[h][g] == alive {
 					AliveCells++
 				}
 			}
 		}
 	}
-	FinalWorld = World
+	FinalWorld = world
 	done = true
 }
 
@@ -91,6 +93,11 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 	World := req.Message
 	Turn := req.Turns
 	Threads := req.Threads
+	if key {
+		World = CurrentWorld
+	} else {
+		Currentturn = 0
+	}
 	go distributor(World, Turn, Threads)
 	return
 }
@@ -108,7 +115,7 @@ func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) 
 //Alive : Return current World + Turn for counting alive cells
 func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
 	// fmt.Println("Return num of alive cells")
-	res.Turn = Currentturn
+	res.Turn = Currentturn - 1
 	res.AliveCells = AliveCells
 	return
 }
@@ -118,6 +125,7 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
 	res.Message = CurrentWorld
+	key = true
 	return
 }
 

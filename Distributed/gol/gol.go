@@ -45,7 +45,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	}
 
 	//initial Call
-	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns, CurrentTurn: 0}
+	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
 	client.Call(stubs.CallInitial, request, response)
 
@@ -74,12 +74,18 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					secReq := stubs.Request{}
 					secRes := new(stubs.Response)
 					client.Call(stubs.CallDoKeypresses, secReq, secRes)
+					// } else if key == 'p' {
+					// 	pause = true
+					// 	reqKey := stubs.Request{}
+					// 	resKey := new(stubs.Response)
+					// 	client.Call(stubs.KeypressPause, reqKey, resKey)
 
 				}
-				// printBoard(p, c, world, turn)
-				// c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
-				// close(c.events)
-				// return
+				// } else if key == 'p' {
+				// 	pause = true
+				// 	reqKey := stubs.Request{}
+				// 	resKey := new(stubs.Response)
+				// 	client.Call(stubs.KeypressPause, reqKey, resKey)
 
 				// } else if key == 'p' {
 				// 	fmt.Println(turn)
