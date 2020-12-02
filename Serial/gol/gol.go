@@ -59,7 +59,7 @@ func calculateNextState(p Params, world [][]byte, startY, endY int) [][]byte {
 		}
 	}
 	return newWorld
-} 
+}
 
 //takes the world as input and returns the (x, y) coordinates of all the cells that are alive.
 func calculateAliveCells(p Params, world [][]uint8) []util.Cell {
