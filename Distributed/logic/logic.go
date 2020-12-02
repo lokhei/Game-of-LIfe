@@ -39,7 +39,7 @@ func distributor(world [][]byte, turns, threads int) {
 
 	for turn := Currentturn; turn <= turns; turn++ {
 		if turn > 0 {
-			Currentturn++
+
 			for pause {
 
 			}
@@ -53,7 +53,7 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
-				go worker(height, width, startY, endY, world, workerChannels[i])
+				worker.call()
 			}
 
 			tempWorld := make([][]byte, 0)
@@ -61,6 +61,7 @@ func distributor(world [][]byte, turns, threads int) {
 				workerResults := <-workerChannels[i]
 				tempWorld = append(tempWorld, workerResults...)
 			}
+			Currentturn++
 			world = tempWorld
 			CurrentWorld = world
 		}
@@ -110,7 +111,7 @@ func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) 
 //Alive : Return current World + Turn for counting alive cells
 func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
 	// fmt.Println("Return num of alive cells")
-	res.Turn = Currentturn - 1
+	res.Turn = Currentturn
 	res.AliveCells = AliveCells
 	return
 }
@@ -125,48 +126,13 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	return
 }
 
-//calculates number of neighbours of cell
-func calculateNeighbours(height, width, x, y int, world [][]byte) int {
-	neighbours := 0
-	for i := -1; i <= 1; i++ {
-		for j := -1; j <= 1; j++ {
-			if i != 0 || j != 0 { //not [y][x]
-				if world[mod(y+i, height)][mod(x+j, width)] == alive {
-					neighbours++
-				}
-			}
-		}
-	}
-	return neighbours
+func (w *Worker) getAddress(req stubs.ReqAddress, res stubs.ResAddress) (err error) {
+
 }
 
-//takes the current state of the world and completes one evolution of the world. It then returns the result.
-func calculateNextState(height, width, startY, endY int, world [][]byte) [][]byte {
-	//makes a new world
-	newWorld := make([][]byte, endY-startY)
-	for i := range newWorld {
-		newWorld[i] = make([]byte, width)
-	}
-	//sets cells to dead or alive according to num of neighbours
-	for y := startY; y < endY; y++ {
-		for x := 0; x < width; x++ {
-			neighbours := calculateNeighbours(height, width, x, y, world)
-			if world[y][x] == alive {
-				if neighbours == 2 || neighbours == 3 {
-					newWorld[y-startY][x] = alive
-				} else {
-					newWorld[y-startY][x] = dead
-				}
-			} else {
-				if neighbours == 3 {
-					newWorld[y-startY][x] = alive
-				} else {
-					newWorld[y-startY][x] = dead
-				}
-			}
-		}
-	}
-	return newWorld
+//CallWorker
+func CallWorker(world [][]byte, startY, endY int) [][]byte {
+	worker, err := rpcDial("tcp")
 }
 
 func main() {

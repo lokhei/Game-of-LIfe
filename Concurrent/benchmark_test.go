@@ -17,7 +17,7 @@ func Benchmark(b *testing.B) {
 	}
 
 	os.Stdout = nil
-	for j := 1; j <= 16; j++ {
+	for j := 16; j <= 16; j++ {
 		tests.Threads = j
 		name := strings.Join([]string{strconv.Itoa(tests.ImageWidth), strconv.Itoa(tests.ImageHeight), strconv.Itoa(turnNum)}, "x")
 

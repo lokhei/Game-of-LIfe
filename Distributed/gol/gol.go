@@ -72,7 +72,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					resKey := new(stubs.Response)
 					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
 					printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
-					
+
 				} else if key == 'q' {
 					close(events)
 					reqKey := stubs.Request{}
@@ -187,10 +187,3 @@ func calculateAliveCells(world [][]byte) []util.Cell {
 
 	return aliveCells
 }
-
-// func ticker(aliveChan chan bool) {
-// 	for {
-// 		time.Sleep(2 * time.Second)
-// 		aliveChan <- true
-// 	}
-// }
