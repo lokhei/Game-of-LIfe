@@ -5,7 +5,7 @@ var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"
 var CallDoKeypresses = "NextStateOperation.DoKeypresses"
 var CalculateNextState = "Worker.CalculateNextState"
-var GetAddress = "Worker.GetAddress"
+var GetAddress = "NextStateOperation.GetAddress"
 
 type Response struct {
 	AliveCells int
@@ -24,8 +24,8 @@ type Request struct {
 
 type ReqWorker struct {
 	World  [][]byte
-	startY int
-	endY   int
+	StartY int
+	EndY   int
 }
 
 type ResWorker struct {

@@ -18,6 +18,7 @@ var Currentturn int
 var done bool
 var key bool
 var pause bool
+var Waddress string
 
 const alive = 255
 const dead = 0
@@ -53,7 +54,7 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
-				worker.call()
+				go CallWorker(world, startY, endY, workerChannels[i])
 			}
 
 			tempWorld := make([][]byte, 0)
@@ -76,11 +77,6 @@ func distributor(world [][]byte, turns, threads int) {
 	}
 	FinalWorld = world
 	done = true
-}
-
-func worker(height, width, startY, endY int, world [][]byte, out chan<- [][]byte) {
-	newData := calculateNextState(height, width, startY, endY, world)
-	out <- newData
 }
 
 //InitialState : Initial state of the world
@@ -126,13 +122,19 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	return
 }
 
-func (w *Worker) getAddress(req stubs.ReqAddress, res stubs.ResAddress) (err error) {
-
+func (s *NextStateOperation) getAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
+	Waddress = req.WorkerAddress
+	return
 }
 
 //CallWorker
-func CallWorker(world [][]byte, startY, endY int) [][]byte {
-	worker, err := rpcDial("tcp")
+func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte) {
+	worker, _ := rpc.Dial("tcp", Waddress)
+	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
+	response := new(stubs.ResWorker)
+
+	worker.Call(stubs.CalculateNextState, request, response)
+	workerChannels <- response.World
 }
 
 func main() {

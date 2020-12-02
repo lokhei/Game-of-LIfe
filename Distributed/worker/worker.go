@@ -5,7 +5,8 @@ import (
 	"log"
 	"net"
 	"net/rpc"
-	// 	"uk.ac.bris.cs/gameoflife/stubs"
+
+	"uk.ac.bris.cs/gameoflife/stubs"
 )
 
 const alive = 255
@@ -42,8 +43,14 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 }
 
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
-func (w *Worker) calculateNextState(height, width, startY, endY int, world [][]byte) [][]byte {
+func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker)(err error) {
 	//makes a new world
+	startY := req.StartY
+	endY := req.EndY
+	width := len(req.World[0])
+	height := len(req.World)
+	world := req.World
+
 	newWorld := make([][]byte, endY-startY)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, width)
@@ -67,7 +74,8 @@ func (w *Worker) calculateNextState(height, width, startY, endY int, world [][]b
 			}
 		}
 	}
-	return newWorld
+	res.World = newWorld
+	return
 }
 
 func main() {
@@ -75,7 +83,9 @@ func main() {
 	logicAddr := flag.String("logic", "127.0.0.1:8030", "Address of logic instance")
 	flag.Parse()
 	client, err := rpc.Dial("tcp", *logicAddr)
-	client.Call()
+
+	client.Call(stubs.GetAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + ":" + *pAddr}, stubs.ResAddress{})
+
 	// rand.Seed(time.Now().UnixNano())
 	rpc.Register(&Worker{})
 	listener, err := net.Listen("tcp", *pAddr)

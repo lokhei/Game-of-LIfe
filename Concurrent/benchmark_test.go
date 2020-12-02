@@ -2,8 +2,9 @@ package main
 
 import (
 	"os"
-	"strconv"
-	"strings"
+	// "strconv"
+	// "strings"
+	"fmt"
 	"testing"
 
 	"uk.ac.bris.cs/gameoflife/gol"
@@ -17,9 +18,8 @@ func Benchmark(b *testing.B) {
 	}
 
 	os.Stdout = nil
-	for j := 16; j <= 16; j++ {
-		tests.Threads = j
-		name := strings.Join([]string{strconv.Itoa(tests.ImageWidth), strconv.Itoa(tests.ImageHeight), strconv.Itoa(turnNum)}, "x")
+	for tests.Threads = 1; tests.Threads <= 16; tests.Threads++ {
+		name := fmt.Sprintf("%dx%dx%d-%d", tests.ImageWidth, tests.ImageHeight, turnNum, tests.Threads)
 
 		b.Run(name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
