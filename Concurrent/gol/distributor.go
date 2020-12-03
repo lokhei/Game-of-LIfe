@@ -63,10 +63,10 @@ func distributor(p Params, c distributorChannels) {
 
 				}
 
-				if i < rem {
-					startY = i * (splitThreads + 1)
-					endY = (i + 1) * (splitThreads + 1)
-				}
+				// if i < rem {
+				// 	startY = i * (splitThreads + 1)
+				// 	endY = (i + 1) * (splitThreads + 1)
+				// }
 
 				go worker(p, startY, endY, world, workerChannels[i])
 

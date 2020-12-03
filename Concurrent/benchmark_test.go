@@ -8,40 +8,43 @@ import (
 	"uk.ac.bris.cs/gameoflife/gol"
 )
 
-const turnNum = 100000000000
-
+const turnNum = 1000
 var value bool
 
 func Benchmark(b *testing.B) {
-	tests := gol.Params{
-		ImageWidth: 512, ImageHeight: 512,
+	tests := []gol.Params{
+		{ImageWidth: 512, ImageHeight: 512, Threads: 1},
+		{ImageWidth: 512, ImageHeight: 512, Threads: 5},
+		{ImageWidth: 512, ImageHeight: 512, Threads: 10},
+		{ImageWidth: 512, ImageHeight: 512, Threads: 16},
 	}
-	value = true
-	os.Stdout = nil
-	name := fmt.Sprintf("%dx%dx%d-%d", tests.ImageWidth, tests.ImageHeight, turnNum, tests.Threads)
 
-	b.Run(name, func(b *testing.B) {
-		tests.Turns = turnNum
+	for _, t := range tests {
+		value = true
+		os.Stdout = nil
+		t.Turns = turnNum
+		name := fmt.Sprintf("%dx%dx%d-%d", t.ImageWidth, t.ImageHeight, turnNum, t.Threads)
 
-		for i := 0; i < b.N; i++ {
-			for tests.Threads = 10; tests.Threads <= 10; tests.Threads++ {
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
 				if value == true {
-
 					events := make(chan gol.Event)
-					gol.Run(tests, events, nil)
+					gol.Run(t, events, nil)
 
 					value = false
+
 					for event := range events {
-						switch event.(type) {
+						switch e := event.(type) {
 						case gol.FinalTurnComplete:
+							fmt.Println("type ", e)
 							value = true
 
 						}
 					}
 				}
 			}
-		}
-	})
+		})
+	}
 }
 
 // package main
