@@ -3,10 +3,8 @@ package main
 import (
 	"flag"
 	"log"
-	"math/rand"
 	"net"
 	"net/rpc"
-	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -122,25 +120,35 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	return
 }
 
-func (s *NextStateOperation) getAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
+//GetAddress gets address of worker node
+func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
 	Waddress = req.WorkerAddress
 	return
 }
 
-//CallWorker
-func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte) {
-	worker, _ := rpc.Dial("tcp", Waddress)
+//CallWorker creates connection to worker node
+func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte) (err error) {
+	worker, err := rpc.Dial("tcp", Waddress)
+	if err != nil {
+		log.Fatal("Dial error:", err)
+		return err
+	}
+	defer worker.Close()
+
 	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
 	response := new(stubs.ResWorker)
 
 	worker.Call(stubs.CalculateNextState, request, response)
 	workerChannels <- response.World
+
+	return
 }
 
+//to connect to gol
 func main() {
 	pAddr := flag.String("port", ":8030", "Port to listen on")
 	flag.Parse()
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed(time.Now().UnixNano())
 	rpc.Register(&NextStateOperation{})
 	listener, err := net.Listen("tcp", *pAddr)
 	if err != nil {

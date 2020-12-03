@@ -37,5 +37,5 @@ type ReqAddress struct {
 }
 
 type ResAddress struct {
-	// WorkerAddress string
+	// ErrorMessage string
 }

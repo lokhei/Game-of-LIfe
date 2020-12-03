@@ -16,8 +16,7 @@ func mod(x, m int) int {
 	return (x + m) % m
 }
 
-//This is just a helper function that attempts to determine this
-//process' IP address.
+//helper function that attempts to determine this process' IP address.
 func getOutboundIP() string {
 	conn, _ := net.Dial("udp", "8.8.8.8:80")
 	defer conn.Close()
@@ -42,8 +41,8 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 	return neighbours
 }
 
-//takes the current state of the world and completes one evolution of the world. It then returns the result.
-func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker)(err error) {
+//CalculateNextState takes the current state of the world and completes one evolution of the world. It then returns the result.
+func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
 	//makes a new world
 	startY := req.StartY
 	endY := req.EndY
@@ -79,12 +78,11 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker)(e
 }
 
 func main() {
+	//pAddr - works as server
 	pAddr := flag.String("port", ":8050", "Port to listen on")
 	logicAddr := flag.String("logic", "127.0.0.1:8030", "Address of logic instance")
 	flag.Parse()
 	client, err := rpc.Dial("tcp", *logicAddr)
-
-	client.Call(stubs.GetAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + ":" + *pAddr}, stubs.ResAddress{})
 
 	// rand.Seed(time.Now().UnixNano())
 	rpc.Register(&Worker{})
@@ -93,6 +91,12 @@ func main() {
 		log.Fatal("listen error:", err)
 	}
 
+	status := new(stubs.ResAddress)
+	client.Call(stubs.GetAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, status)
+	defer client.Close()
+
 	defer listener.Close()
 	rpc.Accept(listener)
+	flag.Parse()
+
 }
