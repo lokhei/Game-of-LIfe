@@ -33,7 +33,7 @@ func TestGol(t *testing.T) {
 						switch e := event.(type) {
 						case gol.FinalTurnComplete:
 							cells = e.Alive
-						}
+						} 
 					}
 					assertEqualBoard(t, cells, expectedAlive, p)
 				})

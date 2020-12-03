@@ -6,7 +6,7 @@ import "uk.ac.bris.cs/gameoflife/util"
 type Params struct {
 	Turns       int
 	Threads     int
-	ImageWidth  int
+	ImageWidth  int 
 	ImageHeight int
 }
 
