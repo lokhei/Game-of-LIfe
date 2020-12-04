@@ -16,7 +16,7 @@ var Currentturn int
 var done bool
 var key bool
 var pause bool
-var Waddress string
+var Waddress []string
 
 const alive = 255
 const dead = 0
@@ -33,8 +33,8 @@ func distributor(world [][]byte, turns, threads int) {
 
 	height := len(world)
 	width := len(world[0])
-	rem := mod(height, threads)
-	splitThreads := height / threads
+	rem := mod(height, len(Waddress))
+	splitThreads := height / len(Waddress)
 
 	for turn := Currentturn; turn <= turns; turn++ {
 		if turn > 0 {
@@ -42,7 +42,7 @@ func distributor(world [][]byte, turns, threads int) {
 			for pause {
 
 			}
-			workerChannels := make([]chan [][]byte, threads)
+			workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
 				startY := i*splitThreads + rem
@@ -52,7 +52,7 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
-				go CallWorker(world, startY, endY, workerChannels[i])
+				go CallWorker(world, startY, endY, workerChannels[i], Waddress[i])
 			}
 
 			tempWorld := make([][]byte, 0)
@@ -122,24 +122,25 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 
 //GetAddress gets address of worker node
 func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
-	Waddress = req.WorkerAddress
+	Waddress = append(Waddress, req.WorkerAddress)
 	return
 }
 
 //CallWorker creates connection to worker node
-func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte) (err error) {
-	worker, err := rpc.Dial("tcp", Waddress)
+func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte, address string) (err error) {
+	worker, err := rpc.Dial("tcp", address)
 	if err != nil {
 		log.Fatal("Dial error:", err)
 		return err
 	}
-	defer worker.Close()
-
 	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
 	response := new(stubs.ResWorker)
 
 	worker.Call(stubs.CalculateNextState, request, response)
 	workerChannels <- response.World
+
+	worker.Close()
+	// fmt.Println("worker close")
 
 	return
 }
@@ -155,6 +156,7 @@ func main() {
 		log.Fatal("listen error:", err)
 	}
 
-	defer listener.Close()
 	rpc.Accept(listener)
+	listener.Close()
+
 }

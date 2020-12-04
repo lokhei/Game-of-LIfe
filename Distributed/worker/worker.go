@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -93,10 +94,14 @@ func main() {
 
 	status := new(stubs.ResAddress)
 	client.Call(stubs.GetAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, status)
-	defer client.Close()
 
-	defer listener.Close()
+	client.Close()
+	fmt.Println("client close")
+
 	rpc.Accept(listener)
+	listener.Close()
+	fmt.Println("listener worker close")
+
 	flag.Parse()
 
 }
