@@ -6,9 +6,12 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
+
+var quit bool
 
 const alive = 255
 const dead = 0
@@ -44,6 +47,9 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 
 //Quitw closes workers
 func (w *Worker) QuitW(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
+	quit = true
+	time.Sleep(2 * time.Second)
+
 	os.Exit(0)
 	return
 }
@@ -77,6 +83,10 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 				} else {
 					newWorld[y-startY][x] = dead
 				}
+			}
+			if quit {
+				res.World = world
+				return
 			}
 		}
 	}
