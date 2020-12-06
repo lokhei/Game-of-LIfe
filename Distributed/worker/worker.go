@@ -42,6 +42,12 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 	return neighbours
 }
 
+//Quitw closes workers
+func (w *Worker) QuitW(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
+	os.Exit(0)
+	return
+}
+
 //CalculateNextState takes the current state of the world and completes one evolution of the world. It then returns the result.
 func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
 	//makes a new world
@@ -76,13 +82,6 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	}
 
 	res.World = newWorld
-	return
-}
-
-//Quitw closes workers
-func (w *Worker) Quitw(req stubs.Request, res *stubs.Response) (err error) {
-	os.Exit(0)
-
 	return
 }
 

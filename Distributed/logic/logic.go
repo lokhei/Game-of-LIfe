@@ -56,6 +56,9 @@ func distributor(world [][]byte, turns, threads int) {
 					endY = (i + 1) * (splitThreads + 1)
 				}
 				go CallWorker(world, startY, endY, workerChannels[i], Waddress[i])
+				if quit == true {
+					os.Exit(0)
+				}
 			}
 
 			tempWorld := make([][]byte, 0)
@@ -127,10 +130,8 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 //Quit closes all instances
 func (s *NextStateOperation) Quit(req stubs.Request, res *stubs.Response) (err error) {
 	quit = true
-
 	time.Sleep(2 * time.Second)
 	os.Exit(0)
-
 	return
 }
 
@@ -151,10 +152,10 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 	go func() {
 		for {
 			if quit {
-				reqKey := stubs.Request{}
-				resKey := new(stubs.Response)
-				worker.Call(stubs.QuitW, reqKey, resKey)
-				// worker.Close()
+				request := stubs.ReqWorker{}
+				response := new(stubs.ResWorker)
+				worker.Call(stubs.QuitW, request, response)
+				worker.Close()
 			}
 		}
 	}()
