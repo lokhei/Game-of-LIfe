@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -28,13 +29,14 @@ func mod(x, m int) int {
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
+// not actually using threads
 func distributor(world [][]byte, turns, threads int) {
 	done = false
 
 	height := len(world)
 	width := len(world[0])
 	rem := mod(height, len(Waddress))
-	splitThreads := height / len(Waddress)
+	splitWorker := height / len(Waddress)
 
 	for turn := Currentturn; turn <= turns; turn++ {
 		if turn > 0 {
@@ -45,14 +47,18 @@ func distributor(world [][]byte, turns, threads int) {
 			workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
-				startY := i*splitThreads + rem
-				endY := (i+1)*splitThreads + rem
+				startY := i*splitWorker + rem
+				endY := (i+1)*splitWorker + rem
 
 				if i < rem {
-					startY = i * (splitThreads + 1)
-					endY = (i + 1) * (splitThreads + 1)
+					startY = i * (splitWorker + 1)
+					endY = (i + 1) * (splitWorker + 1)
 				}
+
+				//split the world into desired subworld
+				// give in number of turns
 				go CallWorker(world, startY, endY, workerChannels[i], Waddress[i])
+
 			}
 
 			tempWorld := make([][]byte, 0)
@@ -123,6 +129,13 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 //GetAddress gets address of worker node
 func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
 	Waddress = append(Waddress, req.WorkerAddress)
+	return
+}
+
+//Quit closes all instances
+func (s *NextStateOperation) Quit(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
+
+	os.Exit(1)
 	return
 }
 

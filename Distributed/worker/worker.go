@@ -2,11 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
-	"time"
+	"os"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -75,9 +74,15 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 			}
 		}
 	}
-	fmt.Println(newWorld)
-	time.Sleep(5 * time.Second)
+
 	res.World = newWorld
+	return
+}
+
+//Quitw closes workers
+func (w *Worker) Quitw(req stubs.Request, res *stubs.Response) (err error) {
+	os.Exit(0)
+
 	return
 }
 

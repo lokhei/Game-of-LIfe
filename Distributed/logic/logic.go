@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -17,6 +19,7 @@ var done bool
 var key bool
 var pause bool
 var Waddress []string
+var quit bool
 
 const alive = 255
 const dead = 0
@@ -82,6 +85,7 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 	// fmt.Println("Gamestate initialised")
 	World := req.Message
 	Turn := req.Turns
+	quit = false
 	Threads := req.Threads
 	if key {
 		World = CurrentWorld
@@ -120,6 +124,16 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	return
 }
 
+//Quit closes all instances
+func (s *NextStateOperation) Quit(req stubs.Request, res *stubs.Response) (err error) {
+	quit = true
+
+	time.Sleep(2 * time.Second)
+	os.Exit(0)
+
+	return
+}
+
 //GetAddress gets address of worker node
 func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
 	Waddress = append(Waddress, req.WorkerAddress)
@@ -133,12 +147,24 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 		log.Fatal("Dial error:", err)
 		return err
 	}
+
+	go func() {
+		for {
+			if quit {
+				reqKey := stubs.Request{}
+				resKey := new(stubs.Response)
+				worker.Call(stubs.QuitW, reqKey, resKey)
+				// worker.Close()
+			}
+		}
+	}()
+
 	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
 	response := new(stubs.ResWorker)
 
 	worker.Call(stubs.CalculateNextState, request, response)
-	workerChannels <- response.World
 
+	workerChannels <- response.World
 	worker.Close()
 	// fmt.Println("worker close")
 
