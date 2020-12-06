@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/pkg/profile"
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
 )
@@ -13,6 +14,8 @@ import (
 func main() {
 	runtime.LockOSThread()
 	var params gol.Params
+
+	defer profile.Start().Stop()
 
 	flag.IntVar(
 		&params.Threads,

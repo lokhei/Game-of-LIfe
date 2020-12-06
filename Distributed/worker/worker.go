@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -74,6 +75,8 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 			}
 		}
 	}
+	fmt.Println(newWorld)
+	time.Sleep(5 * time.Second)
 	res.World = newWorld
 	return
 }
@@ -96,11 +99,11 @@ func main() {
 	client.Call(stubs.GetAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, status)
 
 	client.Close()
-	fmt.Println("client close")
+	// fmt.Println("client close")
 
 	rpc.Accept(listener)
 	listener.Close()
-	fmt.Println("listener worker close")
+	// fmt.Println("listener worker close")
 
 	flag.Parse()
 
