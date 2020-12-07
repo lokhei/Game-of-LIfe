@@ -5,8 +5,10 @@ var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"
 var CallDoKeypresses = "NextStateOperation.DoKeypresses"
 var Quit = "NextStateOperation.Quit"
-var CalculateNextState = "Worker.CalculateNextState"
 var GetAddress = "NextStateOperation.GetAddress"
+
+var CalculateNextState = "Worker.CalculateNextState"
+var QuitW = "Worker.QuitW"
 
 type Response struct {
 	AliveCells int

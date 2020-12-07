@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
@@ -18,6 +19,7 @@ var done bool
 var key bool
 var pause bool
 var Waddress []string
+var quit bool
 
 const alive = 255
 const dead = 0
@@ -29,14 +31,13 @@ func mod(x, m int) int {
 type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
-// not actually using threads
 func distributor(world [][]byte, turns, threads int) {
 	done = false
 
 	height := len(world)
 	width := len(world[0])
 	rem := mod(height, len(Waddress))
-	splitWorker := height / len(Waddress)
+	splitThreads := height / len(Waddress)
 
 	for turn := Currentturn; turn <= turns; turn++ {
 		if turn > 0 {
@@ -47,18 +48,14 @@ func distributor(world [][]byte, turns, threads int) {
 			workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
 				workerChannels[i] = make(chan [][]byte)
-				startY := i*splitWorker + rem
-				endY := (i+1)*splitWorker + rem
+				startY := i*splitThreads + rem
+				endY := (i+1)*splitThreads + rem
 
 				if i < rem {
-					startY = i * (splitWorker + 1)
-					endY = (i + 1) * (splitWorker + 1)
+					startY = i * (splitThreads + 1)
+					endY = (i + 1) * (splitThreads + 1)
 				}
-
-				//split the world into desired subworld
-				// give in number of turns
 				go CallWorker(world, startY, endY, workerChannels[i], Waddress[i])
-
 			}
 
 			tempWorld := make([][]byte, 0)
@@ -88,6 +85,7 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 	// fmt.Println("Gamestate initialised")
 	World := req.Message
 	Turn := req.Turns
+	// quit = false
 	Threads := req.Threads
 	if key {
 		World = CurrentWorld
@@ -126,16 +124,15 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	return
 }
 
-//GetAddress gets address of worker node
-func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
-	Waddress = append(Waddress, req.WorkerAddress)
+//Quit closes all instances
+func (s *NextStateOperation) Quit(req stubs.Request, res *stubs.Response) (err error) {
+	quit = true
 	return
 }
 
-//Quit closes all instances
-func (s *NextStateOperation) Quit(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
-
-	os.Exit(1)
+//GetAddress gets address of worker node
+func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
+	Waddress = append(Waddress, req.WorkerAddress)
 	return
 }
 
@@ -146,12 +143,24 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 		log.Fatal("Dial error:", err)
 		return err
 	}
+
+	go func() {
+		for {
+			if quit {
+				worker.Call(stubs.QuitW, stubs.ReqWorker{}, new(stubs.ResWorker))
+				time.Sleep(2 * time.Second)
+				worker.Close()
+				os.Exit(0)
+			}
+		}
+	}()
+
 	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
 	response := new(stubs.ResWorker)
 
 	worker.Call(stubs.CalculateNextState, request, response)
-	workerChannels <- response.World
 
+	workerChannels <- response.World
 	worker.Close()
 	// fmt.Println("worker close")
 
