@@ -15,8 +15,9 @@ import (
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
-var cellAlive chan<- util.Cell
+var Send bool
 var CurrTurn int
+var CellAlive []util.Cell
 
 type SdlEvent struct{}
 
@@ -32,10 +33,12 @@ func getOutboundIP() string {
 
 // SdlEvent gets info for cell flipped and turn complete events
 func (s *SdlEvent) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
-	for i := range req.Alive {
-		cellAlive <- i
-	}
-	CurrTurn := req.Turn
+	CellAlive = req.Alive
+	// for i := range req.Alive {
+	// 	cellAlive  =  append(cellAlive, req.Alive[i])
+	// }
+	CurrTurn = req.Turn
+	Send = true
 
 	return
 }
@@ -48,7 +51,6 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 		fmt.Println(err)
 		fmt.Println("stopping connection")
 	}
-
 	//call logic to give logic its own ip:port
 	pAddr := flag.String("port", ":8040", "Port to listen on")
 	status := new(stubs.ResAddress)
@@ -67,6 +69,11 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	for i := range world {
 		for j := range world {
 			world[i][j] = <-input
+			if world[i][j] == 255 {
+				fmt.Println("a")
+				events <- CellFlipped{0, util.Cell{X: j, Y: i}}
+
+			}
 		}
 	}
 
@@ -137,10 +144,13 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					client.Call(stubs.Quit, reqKey, resKey)
 					os.Exit(0)
 				}
-			case <-cellAlive:
-				events <- CellFlipped{turn, CellAlive}
-				events <- TurnComplete{turn}
-
+			}
+			if Send {
+				for i := range CellAlive {
+					events <- CellFlipped{CurrTurn, CellAlive[i]}
+					events <- TurnComplete{CurrTurn}
+				}
+				Send = false
 			}
 
 		}
