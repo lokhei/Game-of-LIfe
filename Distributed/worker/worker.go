@@ -48,7 +48,7 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 //Quitw closes workers
 func (w *Worker) QuitW(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
 	quit = true
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Millisecond)
 
 	os.Exit(0)
 	return
@@ -102,7 +102,6 @@ func main() {
 	flag.Parse()
 	client, err := rpc.Dial("tcp", *logicAddr)
 
-	// rand.Seed(time.Now().UnixNano())
 	rpc.Register(&Worker{})
 	listener, err := net.Listen("tcp", *pAddr)
 	if err != nil {

@@ -143,17 +143,13 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 		log.Fatal("Dial error:", err)
 		return err
 	}
+	if quit {
 
-	go func() {
-		for {
-			if quit {
-				worker.Call(stubs.QuitW, stubs.ReqWorker{}, new(stubs.ResWorker))
-				time.Sleep(2 * time.Second)
-				worker.Close()
-				os.Exit(0)
-			}
-		}
-	}()
+		worker.Call(stubs.QuitW, stubs.ReqWorker{}, new(stubs.ResWorker))
+		time.Sleep(10 * time.Millisecond)
+		worker.Close()
+		os.Exit(0)
+	}
 
 	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
 	response := new(stubs.ResWorker)

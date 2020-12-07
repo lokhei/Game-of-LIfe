@@ -18,7 +18,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	var server string
 
 	if flag.Lookup("server") == nil {
-		serverTemp := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
+		serverTemp := flag.String("server", "3.89.44.109:8030", "IP:port string to connect to as server")
 		flag.Parse()
 		server = *serverTemp
 	} else {
