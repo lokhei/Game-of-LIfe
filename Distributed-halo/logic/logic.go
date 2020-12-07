@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -39,17 +40,20 @@ func distributor(world [][]byte, turns, threads int) {
 	width := len(world[0])
 	rem := mod(height, len(Waddress))
 	splitThreads := height / len(Waddress)
-
-	AliveChannel chan <- [] util.Cell
+	AliveChannel := make(chan []util.Cell, 0)
 
 	client, err := rpc.Dial("tcp", CAddress)
+	if err == nil {
+		fmt.Println("k")
+	}
 	if err != nil {
+		fmt.Println("hi")
 		log.Fatal("Dial error:", err)
 	}
 
 	//don't want this
 	for turn := Currentturn; turn <= turns; turn++ {
-		aliveCellList := make([]util.Cell, 0)
+		// aliveCellList := make([]util.Cell, 0)
 
 		if turn > 0 {
 
@@ -93,10 +97,10 @@ func distributor(world [][]byte, turns, threads int) {
 		}
 
 		//
-		select{
-			case alive := <- AliveChannel:
-				SdlReq := stubs.SDLReq{Alive: alive, Turn: turn}
-				client.Call(stubs.SDL, SdlReq, stubs.Response{})
+		select {
+		case alive := <-AliveChannel:
+			SdlReq := stubs.SDLReq{Alive: alive, Turn: turn}
+			client.Call(stubs.SdlEvent, SdlReq, stubs.Response{})
 		}
 	}
 	FinalWorld = world
@@ -161,7 +165,7 @@ func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddr
 
 //GetCAddress gets address of client
 func (s *NextStateOperation) GetCAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
-	Caddress = req.WorkerAddress
+	CAddress = req.WorkerAddress
 	return
 }
 
@@ -187,6 +191,7 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 
 	workerChannels <- response.World
 	AliveChannels <- response.Alive
+	fmt.Println(response.Alive[0])
 	worker.Close()
 	// fmt.Println("worker close")
 

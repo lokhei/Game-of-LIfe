@@ -1,8 +1,9 @@
 package stubs
 
-import{
+import (
 	"uk.ac.bris.cs/gameoflife/util"
-}
+)
+
 var CallInitial = "NextStateOperation.InitialState"
 var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"
@@ -15,7 +16,6 @@ var CalculateNextState = "Worker.CalculateNextState"
 var QuitW = "Worker.QuitW"
 
 var SdlEvent = "Sdl.SdlEvent"
-
 
 type Response struct {
 	AliveCells int
@@ -55,6 +55,6 @@ type SDLRes struct {
 }
 
 type SDLReq struct {
-	Alive [] util.Cell
+	Alive []util.Cell
 	Turn  int
 }
