@@ -10,6 +10,7 @@ type Params struct {
 	Threads     int
 	ImageWidth  int
 	ImageHeight int
+	Address     string
 }
 
 // Run starts the processing of Game of Life. It should initialise channels and goroutines.
@@ -18,7 +19,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	var server string
 
 	if flag.Lookup("server") == nil {
-		serverTemp := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
+		serverTemp := flag.String("server", p.Address, "IP:port string to connect to as server")
 		flag.Parse()
 		server = *serverTemp
 	} else {

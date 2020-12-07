@@ -1,7 +1,10 @@
 package gol
 
 import (
+	"flag"
 	"fmt"
+	"log"
+	"net"
 	"net/rpc"
 	"os"
 	"strconv"
@@ -12,6 +15,31 @@ import (
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
+var cellAlive chan<- util.Cell
+var CurrTurn int
+
+type SdlEvent struct{}
+
+func getOutboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr).IP.String()
+	return localAddr
+}
+
+// SdlEvent gets info for cell flipped and turn complete events
+func (s *SdlEvent) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
+	for i := range req.Alive {
+		cellAlive <- i
+	}
+	CurrTurn := req.Turn
+
+	return
+}
+
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
 	client, err := rpc.Dial("tcp", server)
@@ -20,6 +48,12 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 		fmt.Println(err)
 		fmt.Println("stopping connection")
 	}
+
+	//call logic to give logic its own ip:port
+	pAddr := flag.String("port", ":8040", "Port to listen on")
+	status := new(stubs.ResAddress)
+	client.Call(stubs.GetCAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, status)
+
 	defer client.Close()
 
 	ioCommand <- ioInput
@@ -103,6 +137,9 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					client.Call(stubs.Quit, reqKey, resKey)
 					os.Exit(0)
 				}
+			case <-cellAlive:
+				events <- CellFlipped{turn, CellAlive}
+				events <- TurnComplete{turn}
 
 			}
 

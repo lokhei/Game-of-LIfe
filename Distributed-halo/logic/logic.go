@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 var FinalWorld [][]byte
@@ -19,6 +20,7 @@ var done bool
 var key bool
 var pause bool
 var Waddress []string
+var CAddress string
 var quit bool
 
 const alive = 255
@@ -33,13 +35,22 @@ type NextStateOperation struct{}
 // Distributor divides the work between workers and interacts with other goroutines.
 func distributor(world [][]byte, turns, threads int) {
 	done = false
-
 	height := len(world)
 	width := len(world[0])
 	rem := mod(height, len(Waddress))
 	splitThreads := height / len(Waddress)
 
+	AliveChannel chan <- [] util.Cell
+
+	client, err := rpc.Dial("tcp", CAddress)
+	if err != nil {
+		log.Fatal("Dial error:", err)
+	}
+
+	//don't want this
 	for turn := Currentturn; turn <= turns; turn++ {
+		aliveCellList := make([]util.Cell, 0)
+
 		if turn > 0 {
 
 			for pause {
@@ -55,9 +66,13 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
-				go CallWorker(world, startY, endY, workerChannels[i], Waddress[i])
+				//pass in subworld
+				//pass in turns
+				go CallWorker(world, startY, endY, workerChannels[i], AliveChannel, Waddress[i])
+				//receive the edge rows and send off to respective workers
 			}
 
+			//only append subworlds if required to send back to client
 			tempWorld := make([][]byte, 0)
 			for i := range workerChannels { // collects the resulting parts into a single 2D slice
 				workerResults := <-workerChannels[i]
@@ -72,8 +87,16 @@ func distributor(world [][]byte, turns, threads int) {
 			for w := 0; w < width; w++ {
 				if world[h][w] == alive {
 					AliveCells++
+
 				}
 			}
+		}
+
+		//
+		select{
+			case alive := <- AliveChannel:
+				SdlReq := stubs.SDLReq{Alive: alive, Turn: turn}
+				client.Call(stubs.SDL, SdlReq, stubs.Response{})
 		}
 	}
 	FinalWorld = world
@@ -136,24 +159,26 @@ func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddr
 	return
 }
 
+//GetCAddress gets address of client
+func (s *NextStateOperation) GetCAddress(req stubs.ReqAddress, res *stubs.ResAddress) (err error) {
+	Caddress = req.WorkerAddress
+	return
+}
+
 //CallWorker creates connection to worker node
-func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte, address string) (err error) {
+func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte, AliveChannels chan<- []util.Cell, address string) (err error) {
 	worker, err := rpc.Dial("tcp", address)
 	if err != nil {
 		log.Fatal("Dial error:", err)
 		return err
 	}
+	if quit {
 
-	go func() {
-		for {
-			if quit {
-				worker.Call(stubs.QuitW, stubs.ReqWorker{}, new(stubs.ResWorker))
-				time.Sleep(2 * time.Second)
-				worker.Close()
-				os.Exit(0)
-			}
-		}
-	}()
+		worker.Call(stubs.QuitW, stubs.ReqWorker{}, new(stubs.ResWorker))
+		time.Sleep(10 * time.Millisecond)
+		worker.Close()
+		os.Exit(0)
+	}
 
 	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
 	response := new(stubs.ResWorker)
@@ -161,6 +186,7 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 	worker.Call(stubs.CalculateNextState, request, response)
 
 	workerChannels <- response.World
+	AliveChannels <- response.Alive
 	worker.Close()
 	// fmt.Println("worker close")
 

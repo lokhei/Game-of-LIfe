@@ -42,7 +42,7 @@ func calculateNeighbours(p Params, x, y int, world [][]byte) int {
 }
 
 //takes the current state of the world and completes one evolution of the world. It then returns the result.
-func calculateNextState(p Params, subworld [][]byte, startY, endY int) [][]byte {
+func calculateNextState(p Params, subworld [][]byte, c distributorChannels, startY, endY, turns int) [][]byte {
 
 	newWorld := make([][]byte, endY-startY)
 	for i := range newWorld {
@@ -57,10 +57,14 @@ func calculateNextState(p Params, subworld [][]byte, startY, endY int) [][]byte 
 					newWorld[y-startY][x] = alive
 				} else {
 					newWorld[y-startY][x] = dead
+					c.events <- CellFlipped{CompletedTurns: turns, Cell: util.Cell{X: x, Y: y}}
+
 				}
 			} else {
 				if neighbours == 3 {
 					newWorld[y-startY][x] = alive
+					c.events <- CellFlipped{CompletedTurns: turns, Cell: util.Cell{X: x, Y: y}}
+
 				} else {
 					newWorld[y-startY][x] = dead
 				}
@@ -113,6 +117,14 @@ func distributor(p Params, c distributorChannels) {
 	periodicChan := make(chan bool)
 	go ticker(periodicChan)
 
+	// For all alive cells send a CellFlipped Event
+	for y := 0; y < p.ImageHeight; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			if world[y][x] == alive {
+				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
+			}
+		}
+	}
 	// Execute all turns of the Game of Life.
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
@@ -127,7 +139,7 @@ func distributor(p Params, c distributorChannels) {
 
 				}
 
-				go worker(p, start, end, world, workerChannels[i])
+				go worker(p, start, end, turn, world, c, workerChannels[i])
 
 			}
 
@@ -171,14 +183,6 @@ func distributor(p Params, c distributorChannels) {
 
 		c.events <- TurnComplete{CompletedTurns: turn}
 
-		// For all alive cells send a CellFlipped Event.
-		for y := 0; y < p.ImageHeight; y++ {
-			for x := 0; x < p.ImageWidth; x++ {
-				if world[y][x] == alive {
-					c.events <- CellFlipped{CompletedTurns: turn, Cell: util.Cell{X: x, Y: y}}
-				}
-			}
-		}
 		if turn == p.Turns {
 			c.events <- FinalTurnComplete{CompletedTurns: turn, Alive: calculateAliveCells(p, world)}
 
@@ -192,8 +196,8 @@ func distributor(p Params, c distributorChannels) {
 	close(c.events)
 }
 
-func worker(p Params, startY, endY int, world [][]byte, out chan<- [][]byte) {
-	newData := calculateNextState(p, world, startY, endY)
+func worker(p Params, startY, endY, turn int, world [][]byte, c distributorChannels, out chan<- [][]byte) {
+	newData := calculateNextState(p, world, c, startY, endY, turn)
 	out <- newData
 
 }
