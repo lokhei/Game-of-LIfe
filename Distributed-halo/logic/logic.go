@@ -45,7 +45,7 @@ func distributor(world [][]byte, turns, threads int) {
 
 	//dials into client.go
 	client, err := rpc.Dial("tcp", CAddress)
-	// defer client.Close()
+	defer client.Close()
 
 	if err != nil {
 		log.Fatal("Dial error:", err)
@@ -108,7 +108,7 @@ func distributor(world [][]byte, turns, threads int) {
 		default:
 		}
 	}
-	client.Close()
+	// client.Close()
 
 	FinalWorld = world
 	done = true

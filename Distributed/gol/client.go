@@ -184,7 +184,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 
 func printBoard(p Params, turn int, world [][]byte, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, IoIdle <-chan bool, events chan<- Event) {
 	ioCommand <- ioOutput
-	fileName := fmt.Sprintf("%dx%d%d", p.ImageWidth, p.ImageHeight, turn)
+	fileName := fmt.Sprintf("%dx%dx%d", p.ImageWidth, p.ImageHeight, turn)
 	filename <- fileName
 
 	for y := range world {

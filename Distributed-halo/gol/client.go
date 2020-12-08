@@ -40,25 +40,32 @@ func (s *Sdl) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
 }
 
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
-
+	var pAddr string
 	//client is connecting to logic
 	client, err := rpc.Dial("tcp", server)
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	defer client.Close()
+	// defer client.Close()
 
 	//call logic to give logic client's ip:port
-	pAddr := flag.String("port", ":8060", "Port to listen on")
-	flag.Parse()
+	// pAddr := flag.String("port", ":8060", "Port to listen on")
+	// flag.Parse()
+	if flag.Lookup("port") == nil {
+		portTemp := flag.String("port", ":8060", "IP:port string to connect to as server")
+		flag.Parse()
+		pAddr = *portTemp
+	} else {
+		pAddr = flag.Lookup("port").Value.(flag.Getter).Get().(string)
+	}
 	rpc.Register(&Sdl{})
 
 	//set up listener to listen on port for stuff from logic
-	listener, err := net.Listen("tcp", *pAddr)
+	listener, err := net.Listen("tcp", pAddr)
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	client.Call(stubs.GetCAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, new(stubs.ResAddress))
+	client.Call(stubs.GetCAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + pAddr}, new(stubs.ResAddress))
 
 	ioCommand <- ioInput
 	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
@@ -172,7 +179,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	events <- StateChange{p.Turns, Quitting}
 	// rpc.Accept(listener)
 	// defer listener.Close()
-	listener.Close()
+	// listener.Close()
 
 	close(events)
 
