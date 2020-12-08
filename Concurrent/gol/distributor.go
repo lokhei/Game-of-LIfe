@@ -103,6 +103,9 @@ func distributor(p Params, c distributorChannels) {
 		world[i] = make([]byte, p.ImageWidth)
 		for j := range world {
 			world[i][j] = <-c.input
+			if world[i][j] == alive {
+				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: j, Y: i}}
+			}
 		}
 	}
 
@@ -117,14 +120,6 @@ func distributor(p Params, c distributorChannels) {
 	periodicChan := make(chan bool)
 	go ticker(periodicChan)
 
-	// For all alive cells send a CellFlipped Event
-	for y := 0; y < p.ImageHeight; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
-			if world[y][x] == alive {
-				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
-			}
-		}
-	}
 	// Execute all turns of the Game of Life.
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {

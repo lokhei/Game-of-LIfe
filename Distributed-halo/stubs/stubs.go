@@ -10,7 +10,7 @@ var CallAlive = "NextStateOperation.Alive"
 var CallDoKeypresses = "NextStateOperation.DoKeypresses"
 var Quit = "NextStateOperation.Quit"
 var GetAddress = "NextStateOperation.GetAddress"
-var GetCAddress = "NextStateOperation.GetAddress"
+var GetCAddress = "NextStateOperation.GetCAddress"
 
 var CalculateNextState = "Worker.CalculateNextState"
 var QuitW = "Worker.QuitW"

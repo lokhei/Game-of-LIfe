@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 var quit bool
@@ -22,7 +23,10 @@ func mod(x, m int) int {
 
 //helper function that attempts to determine this process' IP address.
 func getOutboundIP() string {
-	conn, _ := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr).IP.String()
 	return localAddr
@@ -62,11 +66,16 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	width := len(req.World[0])
 	height := len(req.World)
 	world := req.World
+	// res.Alive :
 
 	newWorld := make([][]byte, endY-startY)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, width)
 	}
+
+	//loop through turns
+	//after each turn, send back world[1] and world[-2]
+	//and retreive world[0] and world[-1]
 	//sets cells to dead or alive according to num of neighbours
 	for y := startY; y < endY; y++ {
 		for x := 0; x < width; x++ {
@@ -76,10 +85,12 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 					newWorld[y-startY][x] = alive
 				} else {
 					newWorld[y-startY][x] = dead
+					res.Alive = append(res.Alive, util.Cell{x, y})
 				}
 			} else {
 				if neighbours == 3 {
 					newWorld[y-startY][x] = alive
+					res.Alive = append(res.Alive, util.Cell{x, y})
 				} else {
 					newWorld[y-startY][x] = dead
 				}
@@ -94,6 +105,8 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	res.World = newWorld
 	return
 }
+
+//if called by worker, return whole subworld
 
 func main() {
 	//pAddr - works as server

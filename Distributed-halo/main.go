@@ -38,12 +38,6 @@ func main() {
 		10000000000,
 		"Specify the number of turns to process. Defaults to 10000000000.")
 
-	flag.StringVar(
-		&params.Address,
-		"ip",
-		"127.0.0.1:8030",
-		"ip:port address to connect to engine.")
-
 	flag.Parse()
 
 	fmt.Println("Threads:", params.Threads)

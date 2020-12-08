@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"runtime"
 
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
@@ -10,7 +11,7 @@ import (
 
 // main is the function called when starting Game of Life with 'go run .'
 func main() {
-	// runtime.LockOSThread()
+	runtime.LockOSThread()
 	var params gol.Params
 
 	flag.IntVar(
@@ -36,12 +37,6 @@ func main() {
 		"turns",
 		10000000000,
 		"Specify the number of turns to process. Defaults to 10000000000.")
-
-	flag.StringVar(
-		&params.Address,
-		"ip",
-		"127.0.0.1:8030",
-		"ip:port address to connect to engine.")
 
 	flag.Parse()
 

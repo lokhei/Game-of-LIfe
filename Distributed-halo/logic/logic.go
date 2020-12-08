@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -24,6 +23,8 @@ var Waddress []string
 var CAddress string
 var quit bool
 
+// var alive bool
+
 const alive = 255
 const dead = 0
 
@@ -40,14 +41,13 @@ func distributor(world [][]byte, turns, threads int) {
 	width := len(world[0])
 	rem := mod(height, len(Waddress))
 	splitThreads := height / len(Waddress)
-	AliveChannel := make(chan []util.Cell, 0)
+	AliveChannels := make(chan []util.Cell, 0)
 
+	//dials into client.go
 	client, err := rpc.Dial("tcp", CAddress)
-	if err == nil {
-		fmt.Println("k")
-	}
+	// defer client.Close()
+
 	if err != nil {
-		fmt.Println("hi")
 		log.Fatal("Dial error:", err)
 	}
 
@@ -60,8 +60,10 @@ func distributor(world [][]byte, turns, threads int) {
 			for pause {
 
 			}
+
 			workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
+
 				workerChannels[i] = make(chan [][]byte)
 				startY := i*splitThreads + rem
 				endY := (i+1)*splitThreads + rem
@@ -72,7 +74,8 @@ func distributor(world [][]byte, turns, threads int) {
 				}
 				//pass in subworld
 				//pass in turns
-				go CallWorker(world, startY, endY, workerChannels[i], AliveChannel, Waddress[i])
+
+				go CallWorker(world, startY, endY, workerChannels[i], AliveChannels, Waddress[i])
 				//receive the edge rows and send off to respective workers
 			}
 
@@ -98,18 +101,22 @@ func distributor(world [][]byte, turns, threads int) {
 
 		//
 		select {
-		case alive := <-AliveChannel:
+		case alive := <-AliveChannels:
 			SdlReq := stubs.SDLReq{Alive: alive, Turn: turn}
-			client.Call(stubs.SdlEvent, SdlReq, stubs.Response{})
+			SdlRes := new(stubs.SDLRes)
+			client.Call(stubs.SdlEvent, SdlReq, SdlRes)
+		default:
 		}
 	}
+	client.Close()
+
 	FinalWorld = world
 	done = true
 }
 
 //InitialState : Initial state of the world
 func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response) (err error) {
-	// fmt.Println("Gamestate initialised")
+
 	World := req.Message
 	Turn := req.Turns
 	// quit = false
@@ -125,7 +132,6 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 
 //FinalState : Final state of the world
 func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) (err error) {
-	// fmt.Println("Final Gamestate returned")
 	for done == false {
 		//
 	}
@@ -135,7 +141,6 @@ func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) 
 
 //Alive : Return current World + Turn for counting alive cells
 func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
-	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
 	res.AliveCells = AliveCells
 	return
@@ -143,7 +148,6 @@ func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err 
 
 // DoKeypresses : function for keypresses
 func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response) (err error) {
-	// fmt.Println("Return num of alive cells")
 	res.Turn = Currentturn
 	res.Message = CurrentWorld
 	key = true
@@ -171,6 +175,8 @@ func (s *NextStateOperation) GetCAddress(req stubs.ReqAddress, res *stubs.ResAdd
 
 //CallWorker creates connection to worker node
 func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte, AliveChannels chan<- []util.Cell, address string) (err error) {
+	//connects to worker
+
 	worker, err := rpc.Dial("tcp", address)
 	if err != nil {
 		log.Fatal("Dial error:", err)
@@ -191,18 +197,16 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 
 	workerChannels <- response.World
 	AliveChannels <- response.Alive
-	fmt.Println(response.Alive[0])
 	worker.Close()
-	// fmt.Println("worker close")
 
 	return
 }
 
-//to connect to gol
+//to connect to client
 func main() {
+	//its own connection
 	pAddr := flag.String("port", ":8030", "Port to listen on")
 	flag.Parse()
-	// rand.Seed(time.Now().UnixNano())
 	rpc.Register(&NextStateOperation{})
 	listener, err := net.Listen("tcp", *pAddr)
 	if err != nil {

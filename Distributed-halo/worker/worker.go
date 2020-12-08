@@ -85,12 +85,12 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 					newWorld[y-startY][x] = alive
 				} else {
 					newWorld[y-startY][x] = dead
-					res.Alive = append(res.Alive, util.Cell{x, y - startY})
+					res.Alive = append(res.Alive, util.Cell{x, y})
 				}
 			} else {
 				if neighbours == 3 {
 					newWorld[y-startY][x] = alive
-					res.Alive = append(res.Alive, util.Cell{x, y - startY})
+					res.Alive = append(res.Alive, util.Cell{x, y})
 				} else {
 					newWorld[y-startY][x] = dead
 				}
