@@ -108,6 +108,7 @@ func distributor(p Params, c distributorChannels) {
 			}
 		}
 	}
+	initialWorld := world
 
 	rem := p.ImageHeight % p.Threads
 	splitThreads := p.ImageHeight / p.Threads
@@ -165,8 +166,29 @@ func distributor(p Params, c distributorChannels) {
 							fmt.Println("Continuing")
 							c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
 							break
+						} else if key == 's' {
+							printBoard(p, c, world, turn)
+
+						} else if key == 'q' {
+							printBoard(p, c, world, turn)
+							c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
+							close(c.events)
+							return
+						} else if key == 'k' {
+							fmt.Println("Resetting World")
+							turn = 0
+							world = initialWorld
+							c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
+
 						}
 					}
+
+				} else if key == 'k' {
+					fmt.Println("Resetting World")
+					turn = 0
+					world = initialWorld
+					c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
+
 				}
 
 			case <-periodicChan:
