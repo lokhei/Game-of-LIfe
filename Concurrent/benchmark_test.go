@@ -43,7 +43,7 @@ func Benchmark(b *testing.B) {
 		{ImageWidth: 128, ImageHeight: 128, Threads: 16},
 
 		{ImageWidth: 256, ImageHeight: 256, Threads: 2},
-		{ImageWidth: 512, ImageHeight: 512, Threads: 4},
+		{ImageWidth: 256, ImageHeight: 256, Threads: 4},
 		{ImageWidth: 256, ImageHeight: 256, Threads: 6},
 		{ImageWidth: 256, ImageHeight: 256, Threads: 8},
 		{ImageWidth: 256, ImageHeight: 256, Threads: 10},
