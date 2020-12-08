@@ -7,8 +7,6 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
@@ -42,7 +40,7 @@ func (s *Sdl) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
 	ioCommand <- ioInput
-	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+	filename <- fmt.Sprintf("%dx%d", p.ImageWidth, p.ImageHeight)
 
 	world := make([][]byte, p.ImageHeight)
 	for i := range world {
@@ -78,6 +76,10 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 
 	//initial Call
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
+	// if p.Reset {
+	// 	request = stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns, Reset: true}
+
+	// }
 	response := new(stubs.Response)
 	client.Call(stubs.CallInitial, request, response)
 
@@ -182,7 +184,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 
 func printBoard(p Params, turn int, world [][]byte, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, IoIdle <-chan bool, events chan<- Event) {
 	ioCommand <- ioOutput
-	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
+	fileName := fmt.Sprintf("%dx%d%d", p.ImageWidth, p.ImageHeight, turn)
 	filename <- fileName
 
 	for y := range world {

@@ -119,9 +119,8 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 
 	World := req.Message
 	Turn := req.Turns
-	// quit = false
 	Threads := req.Threads
-	if key {
+	if key && !req.Reset {
 		World = CurrentWorld
 	} else {
 		Currentturn = 0

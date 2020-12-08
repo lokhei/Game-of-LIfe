@@ -30,6 +30,7 @@ type Request struct {
 	Turns    int
 	Keypress rune
 	Pause    bool
+	Reset    bool
 }
 
 type ReqWorker struct {

@@ -2,8 +2,6 @@ package gol
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/util"
@@ -95,7 +93,7 @@ func distributor(p Params, c distributorChannels) {
 	//		 See event.go for a list of all events.
 
 	c.ioCommand <- ioInput
-	c.filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+	c.filename <- fmt.Sprintf("%dx%d", p.ImageWidth, p.ImageHeight)
 
 	// Create the 2D slice to store the world
 	world := make([][]byte, p.ImageHeight)
@@ -122,6 +120,10 @@ func distributor(p Params, c distributorChannels) {
 	go ticker(periodicChan)
 
 	// Execute all turns of the Game of Life.
+	var rTurn int
+	var rAlive int
+	var rWorld [][]byte
+	revert := false
 	turn := 0
 	for turn = 0; turn <= p.Turns; turn++ {
 		if turn > 0 {
@@ -166,29 +168,29 @@ func distributor(p Params, c distributorChannels) {
 							fmt.Println("Continuing")
 							c.events <- StateChange{CompletedTurns: turn, NewState: Executing}
 							break
-						} else if key == 's' {
-							printBoard(p, c, world, turn)
-
-						} else if key == 'q' {
-							printBoard(p, c, world, turn)
-							c.events <- StateChange{CompletedTurns: turn, NewState: Quitting}
-							close(c.events)
-							return
-						} else if key == 'k' {
-							fmt.Println("Resetting World")
-							turn = 0
-							world = initialWorld
-							c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
-
 						}
 					}
 
-				} else if key == 'k' {
+				} else if key == 'r' {
 					fmt.Println("Resetting World")
 					turn = 0
 					world = initialWorld
 					c.events <- AliveCellsCount{CompletedTurns: turn, CellsCount: len(calculateAliveCells(p, world))}
 
+				} else if key == 'k' {
+
+					if !revert {
+						rAlive = len(calculateAliveCells(p, world))
+						fmt.Printf("Setting revert point at turn %d with Alive Cells %d\n", turn, rAlive)
+						rTurn = turn
+						rWorld = world
+						revert = true
+					} else {
+						fmt.Printf("Reverting back to turn %d with Alive Cells %d\n", rTurn, rAlive)
+						turn = rTurn
+						world = rWorld
+						revert = false
+					}
 				}
 
 			case <-periodicChan:
@@ -228,7 +230,7 @@ func ticker(aliveChan chan bool) {
 
 func printBoard(p Params, c distributorChannels, world [][]byte, turn int) {
 	c.ioCommand <- ioOutput
-	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
+	fileName := fmt.Sprintf("%dx%dx%d", p.ImageWidth, p.ImageHeight, turn)
 	c.filename <- fileName
 
 	for y := range world {
