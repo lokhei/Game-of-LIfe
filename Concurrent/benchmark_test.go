@@ -53,9 +53,9 @@ func Benchmark(b *testing.B) {
 
 		{ImageWidth: 512, ImageHeight: 512, Threads: 1},
 		{ImageWidth: 512, ImageHeight: 512, Threads: 2},
-		{ImageWidth: 512, ImageHeight: 512, Threads: 2},
 		{ImageWidth: 512, ImageHeight: 512, Threads: 3},
 		{ImageWidth: 512, ImageHeight: 512, Threads: 4},
+		{ImageWidth: 512, ImageHeight: 512, Threads: 5},
 		{ImageWidth: 512, ImageHeight: 512, Threads: 6},
 		{ImageWidth: 512, ImageHeight: 512, Threads: 7},
 		{ImageWidth: 512, ImageHeight: 512, Threads: 8},
