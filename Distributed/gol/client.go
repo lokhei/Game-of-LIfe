@@ -41,6 +41,22 @@ func (s *Sdl) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
 
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
+	ioCommand <- ioInput
+	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
+
+	world := make([][]byte, p.ImageHeight)
+	for i := range world {
+		world[i] = make([]byte, p.ImageWidth)
+		for j := range world {
+			world[i][j] = <-input
+			if world[i][j] == 255 {
+
+				events <- CellFlipped{0, util.Cell{X: j, Y: i}}
+
+			}
+		}
+	}
+
 	//client is connecting to logic
 	client, err := rpc.Dial("tcp", server)
 	if err != nil {
@@ -60,21 +76,6 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	}
 	client.Call(stubs.GetCAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, new(stubs.ResAddress))
 
-	ioCommand <- ioInput
-	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
-
-	world := make([][]byte, p.ImageHeight)
-	for i := range world {
-		world[i] = make([]byte, p.ImageWidth)
-		for j := range world {
-			world[i][j] = <-input
-			if world[i][j] == 255 {
-
-				events <- CellFlipped{0, util.Cell{X: j, Y: i}}
-
-			}
-		}
-	}
 	//initial Call
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
@@ -118,10 +119,11 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					printBoard(p, resKey.Turn, resKey.Message, filename, output, ioCommand, ioIdle, events)
 
 				} else if key == 'q' {
-					close(events)
 					reqKey := stubs.Request{}
 					resKey := new(stubs.Response)
 					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+					// close(events)
+					os.Exit(0)
 
 				} else if key == 'p' {
 					// pause = true
