@@ -20,6 +20,10 @@ var CellAlive []util.Cell
 
 type Sdl struct{}
 
+var (
+	sdlStatus = Sdl{}
+)
+
 func getOutboundIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -47,12 +51,12 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	// defer client.Close()
 
 	//call logic to give logic client's ip:port
-	rpc.Register(&Sdl{})
+	rpc.Register(&sdlStatus)
 
 	//set up listener to listen on port for stuff from logic
 	listener, err := net.Listen("tcp", ":0")
 	pAddr := listener.Addr().(*net.TCPAddr).Port
-	fmt.Println(getOutboundIP() + ":" + strconv.Itoa(pAddr))
+	// fmt.Println(getOutboundIP() + ":" + strconv.Itoa(pAddr))
 
 	client.Call(stubs.GetCAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + ":" + strconv.Itoa(pAddr)}, new(stubs.ResAddress))
 
@@ -171,7 +175,6 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	// listener.Close()
 
 	close(events)
-	// os.Exit(0)
 
 }
 
