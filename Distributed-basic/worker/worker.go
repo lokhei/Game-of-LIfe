@@ -18,7 +18,13 @@ const alive = 255
 const dead = 0
 
 func mod(x, m int) int {
-	return (x + m) % m
+	if x == m {
+		return 0
+	} else if x == -1 {
+		return m - 1
+	} else {
+		return x
+	}
 }
 
 //helper function that attempts to determine this process' IP address.
