@@ -20,9 +20,9 @@ var CellAlive []util.Cell
 
 type Sdl struct{}
 
-var (
-	sdlStatus = Sdl{}
-)
+// var (
+// 	SdlStatus = Sdl{}
+// )
 
 func getOutboundIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
@@ -43,6 +43,8 @@ func (s *Sdl) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
 }
 
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
+	
+
 	//client is connecting to logic
 	client, err := rpc.Dial("tcp", server)
 	if err != nil {
@@ -51,7 +53,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	// defer client.Close()
 
 	//call logic to give logic client's ip:port
-	rpc.Register(&sdlStatus)
+	rpc.Register(&Sdl{})
 
 	//set up listener to listen on port for stuff from logic
 	listener, err := net.Listen("tcp", ":0")
