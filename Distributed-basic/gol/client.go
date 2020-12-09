@@ -2,8 +2,11 @@ package gol
 
 import (
 	"fmt"
+	"log"
 	"net/rpc"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
@@ -12,34 +15,32 @@ import (
 
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
 
+	//client is connecting to logic
 	client, err := rpc.Dial("tcp", server)
 	if err != nil {
-		fmt.Println("RPC client returned error:")
-		fmt.Println(err)
-		fmt.Println("stopping connection")
+		log.Fatal("listen error:", err)
 	}
-	defer client.Close()
 
 	ioCommand <- ioInput
-	filename <- fmt.Sprintf("%dx%d", p.ImageWidth, p.ImageHeight)
+	filename <- strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight)}, "x")
 
 	world := make([][]byte, p.ImageHeight)
 	for i := range world {
 		world[i] = make([]byte, p.ImageWidth)
-	}
-
-	for i := range world {
 		for j := range world {
 			world[i][j] = <-input
+			if world[i][j] == 255 {
+
+				events <- CellFlipped{0, util.Cell{X: j, Y: i}}
+
+			}
 		}
 	}
-
 	//initial Call
 	request := stubs.Request{Message: world, Threads: p.Threads, Turns: p.Turns}
 	response := new(stubs.Response)
 	client.Call(stubs.CallInitial, request, response)
 
-	//ticker
 	ticker := time.NewTicker(2 * time.Second)
 	done := make(chan bool)
 	pause := false
@@ -68,10 +69,8 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					reqKey := stubs.Request{}
 					resKey := new(stubs.Response)
 					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
-					os.Exit(0)
 
 				} else if key == 'p' {
-					// pause = true
 					reqKey := stubs.Request{Pause: true}
 					pause = true
 					resKey := new(stubs.Response)
@@ -95,14 +94,12 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 
 				} else if key == 'k' {
 					fmt.Println("Exit All")
-					// close(events)
 
 					reqKey := stubs.Request{}
 					resKey := new(stubs.Response)
 					client.Call(stubs.Quit, reqKey, resKey)
 					os.Exit(0)
 				}
-
 			}
 
 		}
@@ -119,13 +116,14 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(returnedworld)}
 	printBoard(p, p.Turns, returnedworld, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
+
 	close(events)
 
 }
 
 func printBoard(p Params, turn int, world [][]byte, filename chan<- string, output chan<- uint8, ioCommand chan<- ioCommand, IoIdle <-chan bool, events chan<- Event) {
 	ioCommand <- ioOutput
-	fileName := fmt.Sprintf("%dx%dx%d", p.ImageWidth, p.ImageHeight, turn)
+	fileName := strings.Join([]string{strconv.Itoa(p.ImageWidth), strconv.Itoa(p.ImageHeight), strconv.Itoa(turn)}, "x")
 	filename <- fileName
 
 	for y := range world {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 var quit bool
@@ -22,7 +23,10 @@ func mod(x, m int) int {
 
 //helper function that attempts to determine this process' IP address.
 func getOutboundIP() string {
-	conn, _ := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr).IP.String()
 	return localAddr
@@ -48,7 +52,7 @@ func calculateNeighbours(height, width, x, y int, world [][]byte) int {
 //Quitw closes workers
 func (w *Worker) QuitW(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
 	quit = true
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Millisecond)
 
 	os.Exit(0)
 	return
@@ -62,11 +66,16 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	width := len(req.World[0])
 	height := len(req.World)
 	world := req.World
+	// res.Alive :
 
 	newWorld := make([][]byte, endY-startY)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, width)
 	}
+
+	//loop through turns
+	//after each turn, send back world[1] and world[-2]
+	//and retreive world[0] and world[-1]
 	//sets cells to dead or alive according to num of neighbours
 	for y := startY; y < endY; y++ {
 		for x := 0; x < width; x++ {
@@ -76,10 +85,12 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 					newWorld[y-startY][x] = alive
 				} else {
 					newWorld[y-startY][x] = dead
+					res.Alive = append(res.Alive, util.Cell{x, y})
 				}
 			} else {
 				if neighbours == 3 {
 					newWorld[y-startY][x] = alive
+					res.Alive = append(res.Alive, util.Cell{x, y})
 				} else {
 					newWorld[y-startY][x] = dead
 				}
@@ -95,6 +106,8 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	return
 }
 
+//if called by worker, return whole subworld
+
 func main() {
 	//pAddr - works as server
 	pAddr := flag.String("port", ":8050", "Port to listen on")
@@ -102,7 +115,6 @@ func main() {
 	flag.Parse()
 	client, err := rpc.Dial("tcp", *logicAddr)
 
-	// rand.Seed(time.Now().UnixNano())
 	rpc.Register(&Worker{})
 	listener, err := net.Listen("tcp", *pAddr)
 	if err != nil {
@@ -113,11 +125,9 @@ func main() {
 	client.Call(stubs.GetAddress, stubs.ReqAddress{WorkerAddress: getOutboundIP() + *pAddr}, status)
 
 	client.Close()
-	// fmt.Println("client close")
 
 	rpc.Accept(listener)
 	listener.Close()
-	// fmt.Println("listener worker close")
 
 	flag.Parse()
 

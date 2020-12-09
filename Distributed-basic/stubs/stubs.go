@@ -1,5 +1,9 @@
 package stubs
 
+import (
+	"uk.ac.bris.cs/gameoflife/util"
+)
+
 var CallInitial = "NextStateOperation.InitialState"
 var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"
@@ -33,6 +37,7 @@ type ReqWorker struct {
 
 type ResWorker struct {
 	World [][]byte
+	Alive []util.Cell
 }
 
 type ReqAddress struct {
@@ -40,5 +45,4 @@ type ReqAddress struct {
 }
 
 type ResAddress struct {
-	// ErrorMessage string
 }
