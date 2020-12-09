@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/pkg/profile"
+	// "github.com/pkg/profile"
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
 )
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile `file`")
 
 // main is the function called when starting Game of Life with 'go run .'
 func main() {
 	runtime.LockOSThread()
 	var params gol.Params
 
-	defer profile.Start().Stop()
+	// defer profile.Start().Stop()
 
 	flag.IntVar(
 		&params.Threads,

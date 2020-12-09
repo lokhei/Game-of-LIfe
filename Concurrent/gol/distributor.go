@@ -21,7 +21,13 @@ const alive = 255
 const dead = 0
 
 func mod(x, m int) int {
-	return (x + m) % m
+	if x == m {
+		return 0
+	} else if x == -1 {
+		return m - 1
+	} else {
+		return x
+	}
 }
 
 //calculates number of neighbours of cell
@@ -30,6 +36,7 @@ func calculateNeighbours(p Params, x, y int, world [][]byte) int {
 	for i := -1; i <= 1; i++ {
 		for j := -1; j <= 1; j++ {
 			if i != 0 || j != 0 { //not [y][x]
+
 				if world[mod(y+i, p.ImageHeight)][mod(x+j, p.ImageWidth)] == alive {
 					neighbours++
 				}
