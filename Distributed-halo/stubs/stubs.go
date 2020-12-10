@@ -15,7 +15,7 @@ var GetCAddress = "NextStateOperation.GetCAddress"
 var CalculateNextState = "Worker.CalculateNextState"
 var QuitW = "Worker.QuitW"
 
-var SdlEvent = "SdlStatus.SdlEvent"
+var SdlEvent = "Sdl.SdlEvent"
 
 type Response struct {
 	AliveCells int

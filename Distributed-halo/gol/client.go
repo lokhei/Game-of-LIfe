@@ -43,7 +43,6 @@ func (s *Sdl) SdlEvent(req stubs.SDLReq, res *stubs.SDLRes) (err error) {
 }
 
 func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Params, filename chan<- string, input <-chan uint8, output chan<- uint8, ioCommand chan<- ioCommand, ioIdle <-chan bool) {
-	
 
 	//client is connecting to logic
 	client, err := rpc.Dial("tcp", server)
@@ -83,7 +82,6 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	client.Call(stubs.CallInitial, request, response)
 
 	go rpc.Accept(listener)
-	// listener.Close()
 
 	ticker := time.NewTicker(2 * time.Second)
 	done := make(chan bool)
@@ -124,6 +122,8 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					reqKey := stubs.Request{}
 					resKey := new(stubs.Response)
 					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
+					client.Close()
+					listener.Close()
 
 				} else if key == 'p' {
 					// pause = true
@@ -154,6 +154,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 					reqKey := stubs.Request{}
 					resKey := new(stubs.Response)
 					client.Call(stubs.Quit, reqKey, resKey)
+					client.Close()
 					os.Exit(0)
 				}
 			}
@@ -172,9 +173,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(returnedworld)}
 	printBoard(p, p.Turns, returnedworld, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}
-	// rpc.Accept(listener)
-	// defer listener.Close()
-	// listener.Close()
+	client.Close()
 
 	close(events)
 

@@ -194,10 +194,10 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 	response := new(stubs.ResWorker)
 
 	worker.Call(stubs.CalculateNextState, request, response)
+	worker.Close()
 
 	workerChannels <- response.World
 	AliveChannels <- response.Alive
-	worker.Close()
 
 	return
 }
