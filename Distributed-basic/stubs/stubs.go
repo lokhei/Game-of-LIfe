@@ -13,6 +13,9 @@ var GetAddress = "NextStateOperation.GetAddress"
 
 var CalculateNextState = "Worker.CalculateNextState"
 var QuitW = "Worker.QuitW"
+var GetAlive = "Worker.GetAlive"
+
+// var Final = "Worker.Final"
 
 type Response struct {
 	AliveCells int
@@ -30,16 +33,22 @@ type Request struct {
 }
 
 type ReqWorker struct {
-	World  [][]byte
-	Top    []byte
-	Bottom []byte
-	StartY int
-	EndY   int
+	World       [][]byte
+	Top         []byte
+	Bottom      []byte
+	StartY      int
+	EndY        int
+	Turns       int
+	CurrentTurn int
+	Alive       bool
 }
 
 type ResWorker struct {
-	World [][]byte
-	Alive []util.Cell
+	World       [][]byte
+	Alive       []util.Cell
+	Bottom      []byte
+	Top         []byte
+	CurrentTurn int
 }
 
 type ReqAddress struct {
