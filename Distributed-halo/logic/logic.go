@@ -50,21 +50,25 @@ func distributor(world [][]byte, turns, threads int) {
 	if err != nil {
 		log.Fatal("Dial error:", err)
 	}
+	workerChannels := make([]chan [][]byte, len(Waddress))
 
+	for i := range workerChannels {
+
+		workerChannels[i] = make(chan [][]byte)
+
+	}
 	//don't want this
 	for turn := Currentturn; turn <= turns; turn++ {
 		// aliveCellList := make([]util.Cell, 0)
 
-		if turn > 0 {
+		if turns > 0 {
 
 			for pause {
 
 			}
 
-			workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
 
-				workerChannels[i] = make(chan [][]byte)
 				startY := i*splitThreads + rem
 				endY := (i+1)*splitThreads + rem
 
@@ -72,6 +76,7 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
+
 				//pass in subworld
 				//pass in turns
 

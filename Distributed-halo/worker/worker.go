@@ -73,6 +73,7 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	width := len(req.World[0])
 	height := len(req.World)
 	world := req.World
+
 	// res.Alive :
 
 	newWorld := make([][]byte, endY-startY)

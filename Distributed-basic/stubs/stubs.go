@@ -31,6 +31,8 @@ type Request struct {
 
 type ReqWorker struct {
 	World  [][]byte
+	Top    []byte
+	Bottom []byte
 	StartY int
 	EndY   int
 }

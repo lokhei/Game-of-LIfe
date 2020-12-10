@@ -41,7 +41,16 @@ func distributor(world [][]byte, turns, threads int) {
 	splitThreads := height / len(Waddress)
 	AliveChannels := make(chan []util.Cell, 0)
 
+	workerChannels := make([]chan [][]byte, len(Waddress))
+	// middle := make([][]byte, len(Waddress))
+	var bottom []byte
+	var top []byte
 	//don't want this
+
+	for i := range workerChannels {
+
+		workerChannels[i] = make(chan [][]byte)
+	}
 	for turn := Currentturn; turn <= turns; turn++ {
 
 		if turn > 0 {
@@ -50,10 +59,10 @@ func distributor(world [][]byte, turns, threads int) {
 
 			}
 
-			workerChannels := make([]chan [][]byte, len(Waddress))
+			// workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
 
-				workerChannels[i] = make(chan [][]byte)
+				// workerChannels[i] = make(chan [][]byte)
 				startY := i*splitThreads + rem
 				endY := (i+1)*splitThreads + rem
 
@@ -61,10 +70,24 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
+
 				//pass in subworld
 				//pass in turns
 
-				go CallWorker(world, startY, endY, workerChannels[i], AliveChannels, Waddress[i])
+				if startY == 0 {
+					bottom = world[height-1]
+				} else {
+					bottom = world[startY-1]
+				}
+				if endY == height {
+					top = world[0]
+				} else {
+					top = world[endY]
+
+				}
+				subworld := world[startY:endY]
+				go CallWorker(subworld, bottom, top, workerChannels[i], AliveChannels, Waddress[i])
+
 				//receive the edge rows and send off to respective workers
 			}
 
@@ -149,7 +172,7 @@ func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddr
 }
 
 //CallWorker creates connection to worker node
-func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- [][]byte, AliveChannels chan<- []util.Cell, address string) (err error) {
+func CallWorker(subworld [][]byte, bottom, top []byte, workerChannels chan<- [][]byte, AliveChannels chan<- []util.Cell, address string) (err error) {
 	//connects to worker
 
 	worker, err := rpc.Dial("tcp", address)
@@ -165,12 +188,11 @@ func CallWorker(world [][]byte, startingY, endingY int, workerChannels chan<- []
 		os.Exit(0)
 	}
 
-	request := stubs.ReqWorker{World: world, StartY: startingY, EndY: endingY}
+	request := stubs.ReqWorker{World: subworld, Top: top, Bottom: bottom}
 	response := new(stubs.ResWorker)
 
 	worker.Call(stubs.CalculateNextState, request, response)
 	worker.Close()
-
 	workerChannels <- response.World
 	AliveChannels <- response.Alive
 	return
