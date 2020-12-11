@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -81,18 +80,14 @@ func (w *Worker) QuitW(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
 	return
 }
 
-func computeTurns(height, width, totalTurns, currentTurn int, world [][]byte, top, bottom []byte) {
+func computeTurns(height, width, totalTurns, currentTurn int, top, bottom []byte) {
 	newWorld = make([][]byte, height)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, width)
 	}
 	turn = currentTurn
 	AliveCells = make([]util.Cell, 0)
-	//loop through turns
-	//after each turn, send back world[1] and world[-2]
-	//and retreive world[0] and world[-1]
-	//sets cells to dead or alive according to num of neighbours
-	// for turn := currentTurn; turn <= totalTurns; turn++ {
+
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			neighbours := calculateNeighbours(height, width, x, y, bottom, top, world)
@@ -112,59 +107,49 @@ func computeTurns(height, width, totalTurns, currentTurn int, world [][]byte, to
 					newWorld[y][x] = dead
 				}
 			}
-			if quit {
-				// res.World = world
-				return
-			}
+			// if quit {
+			// 	// res.World = world
+			// 	return
+			// }
 		}
 	}
-	bottom = newWorld[0]
-	top = newWorld[height-1]
+	world = newWorld
+
 	turn++
-	// }
+	return
 }
 
 //CalculateNextState takes the current state of the world and completes one evolution of the world. It then returns the result.
 func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (err error) {
 
-	// fmt.Println(req.CurrentTurn)
+	if req.World != nil {
+		world = req.World
+	}
 
-	// fmt.Println(len(req.World[0]))
-
-	width := len(req.World[0])
-	// fmt.Println(req.CurrentTurn)
-	height := len(req.World)
-	world := req.World
+	width := len(world[0])
+	height := len(world)
 	top = req.Top
 	bottom = req.Bottom
 	totalTurns := req.Turns
 	currentTurn := req.CurrentTurn
 
-	computeTurns(height, width, totalTurns, currentTurn, world, top, bottom)
+	computeTurns(height, width, totalTurns, currentTurn, top, bottom)
 
-	// res.Bottom = newWorld[0]
-
-	// res.Top = newWorld[height-1]
-
-	// turn++
-	fmt.Println(turn, totalTurns)
-	if turn == totalTurns {
-		res.CurrentTurn = turn
-		res.World = newWorld
-		return
-	}
-	if turn == currentTurn+1 {
-		res.Bottom = bottom
-		res.Top = top
-		res.CurrentTurn = turn
+	for {
+		if turn == totalTurns {
+			res.CurrentTurn = turn
+			res.World = newWorld
+			return
+		}
+		if turn == currentTurn+1 {
+			res.Bottom = world[0]
+			res.Top = world[height-1]
+			res.CurrentTurn = turn
+			res.Alive = AliveCells
+			return
+		}
 
 	}
-
-	// if turn != totalTurns {
-	// 	return
-	// }
-	// res.World = newWorld
-	return
 }
 
 func main() {
@@ -187,7 +172,5 @@ func main() {
 
 	rpc.Accept(listener)
 	listener.Close()
-
-	flag.Parse()
 
 }

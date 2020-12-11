@@ -72,7 +72,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 
 				} else if key == 'p' {
 					reqKey := stubs.Request{Pause: true}
-					pause = true
+					// pause = true
 					resKey := new(stubs.Response)
 					client.Call(stubs.CallDoKeypresses, reqKey, resKey)
 					events <- StateChange{CompletedTurns: resKey.Turn, NewState: Paused}
@@ -84,7 +84,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 
 							reqKey = stubs.Request{Pause: false}
 							resKey = new(stubs.Response)
-							pause = false
+							// pause = false
 							client.Call(stubs.CallDoKeypresses, reqKey, resKey)
 							break
 

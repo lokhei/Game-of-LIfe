@@ -40,7 +40,6 @@ type ReqWorker struct {
 	EndY        int
 	Turns       int
 	CurrentTurn int
-	Alive       bool
 }
 
 type ResWorker struct {

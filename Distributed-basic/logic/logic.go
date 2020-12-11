@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/stubs"
-	"uk.ac.bris.cs/gameoflife/util"
 )
 
 var FinalWorld [][]byte
@@ -19,14 +17,13 @@ var AliveCells int
 var Currentturn int
 var done bool
 var key bool
-var Alive []bool
+var alivereq []bool
 var pause bool
 var Waddress []string
 var TopC [][]byte
 var BottomC [][]byte
 var Current []int
 
-// var CAddress string
 var quit bool
 
 const alive = 255
@@ -40,20 +37,20 @@ type NextStateOperation struct{}
 
 // Distributor divides the work between workers and interacts with other goroutines.
 func distributor(world [][]byte, turns, threads int) {
-	done = false
 	height := len(world)
-	// width := len(world[0])
 	rem := mod(height, len(Waddress))
 	splitThreads := height / len(Waddress)
-	AliveChannels := make(chan []util.Cell, 0)
 
 	workerChannels := make([]chan [][]byte, len(Waddress))
+	AliveChannel := make([]chan int, len(Waddress))
+
 	startY := make([]int, len(Waddress))
 	endY := make([]int, len(Waddress))
 	bottom := make([]byte, len(Waddress))
 	top := make([]byte, len(Waddress))
 	TopC = make([][]byte, len(Waddress))
 	BottomC = make([][]byte, len(Waddress))
+	alivereq = make([]bool, len(Waddress))
 
 	Current = make([]int, len(Waddress))
 
@@ -67,11 +64,14 @@ func distributor(world [][]byte, turns, threads int) {
 		}
 
 		workerChannels[i] = make(chan [][]byte)
+		AliveChannel[i] = make(chan int)
 
 	}
 	if turns == 0 {
-		done = true
 		FinalWorld = world
+		done = true
+		return
+
 	}
 
 	if turns > 0 {
@@ -94,29 +94,23 @@ func distributor(world [][]byte, turns, threads int) {
 			}
 			Current[i] = 0
 			subworld := world[startY[i]:endY[i]]
-			go CallWorker(subworld, bottom, top, turns, Current[i], i, workerChannels[i], AliveChannels, Waddress[i])
+			go CallWorker(subworld, bottom, top, turns, Current[i], i, workerChannels[i], AliveChannel[i], Waddress[i])
 
 		}
-
-		// world = tempWorld
-		// CurrentWorld = world
 	}
 	for {
 		for i := 0; i < len(Current)-1; i++ {
 			if Current[i] != Current[i+1] {
 				break
 			}
-
 		}
-		Currentturn++
+		Currentturn = Current[0]
 		if Currentturn == turns {
 
 			reconstruct(workerChannels)
+			break
 		}
-		break
 	}
-
-	// client.Close()
 
 }
 
@@ -125,14 +119,14 @@ func (s *NextStateOperation) InitialState(req stubs.Request, res *stubs.Response
 
 	World := req.Message
 	Turn := req.Turns
-	// quit = false
 	Threads := req.Threads
-	Alive = make([]bool, len(Waddress))
 	if key {
 		World = CurrentWorld
 	} else {
 		Currentturn = 0
 	}
+	Currentturn = 0
+
 	go distributor(World, Turn, Threads)
 	return
 }
@@ -144,36 +138,39 @@ func (s *NextStateOperation) FinalState(req stubs.Request, res *stubs.Response) 
 	}
 
 	res.Message = FinalWorld
+	done = false
 	return
 }
 
 //Alive : Return number of alive cells + Turn
 func (s *NextStateOperation) Alive(req stubs.Request, res *stubs.Response) (err error) {
 	AliveCells = 0
-	all := false
-	for i := range Alive {
-		Alive[i] = true
+	for i := range alivereq {
+		alivereq[i] = true
 	}
+	all := false
 	for {
-		for i := range Alive {
-			if Alive[i] == false {
+		for i := range alivereq {
+
+			if alivereq[i] == false {
 				all = true
 			} else {
 				all = false
-				break
 			}
+
 		}
-		break
+		if all {
+			break
+		}
 	}
-	if all == true {
-		res.Turn = Currentturn
-		res.AliveCells = AliveCells
-	}
+	res.Turn = Currentturn
+	res.AliveCells = AliveCells
 	return
 }
 
 // DoKeypresses : function for keypresses
 func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response) (err error) {
+
 	res.Turn = Currentturn
 	res.Message = CurrentWorld
 	key = true
@@ -194,7 +191,7 @@ func (s *NextStateOperation) GetAddress(req stubs.ReqAddress, res *stubs.ResAddr
 }
 
 //CallWorker creates connection to worker node
-func CallWorker(subworld [][]byte, bottom, top []byte, turn, current, workernum int, workerChannels chan<- [][]byte, AliveChannels chan<- []util.Cell, address string) (err error) {
+func CallWorker(subworld [][]byte, bottom, top []byte, turn, current, workernum int, workerChannels chan<- [][]byte, AliveChannel chan<- int, address string) (err error) {
 	//connects to worker
 
 	worker, err := rpc.Dial("tcp", address)
@@ -217,18 +214,18 @@ func CallWorker(subworld [][]byte, bottom, top []byte, turn, current, workernum 
 
 	for current < turn {
 		if current == 0 {
-			request = stubs.ReqWorker{World: subworld, Top: top, Bottom: bottom, Turns: turn, CurrentTurn: current, Alive: Alive[workernum]}
-		} else if current < turn && len(Waddress) == 1 {
-			request = stubs.ReqWorker{Top: BottomC[0], Bottom: TopC[0], Turns: turn, CurrentTurn: current, Alive: Alive[workernum]}
+			request = stubs.ReqWorker{World: subworld, Top: top, Bottom: bottom, Turns: turn, CurrentTurn: current}
+		} else if len(Waddress) == 1 {
+			request = stubs.ReqWorker{Top: BottomC[0], Bottom: TopC[0], Turns: turn, CurrentTurn: current}
 
-		} else if current < turn && workernum == 0 {
-			request = stubs.ReqWorker{Top: BottomC[workernum+1], Bottom: TopC[len(Waddress)-1], Turns: turn, CurrentTurn: current, Alive: Alive[workernum]}
+		} else if workernum == 0 {
+			request = stubs.ReqWorker{Top: BottomC[workernum+1], Bottom: TopC[len(Waddress)-1], Turns: turn, CurrentTurn: current}
 
-		} else if current < turn && workernum == len(Waddress)-1 {
-			request = stubs.ReqWorker{Top: BottomC[0], Bottom: TopC[workernum-1], Turns: turn, CurrentTurn: current, Alive: Alive[workernum]}
+		} else if workernum == len(Waddress)-1 {
+			request = stubs.ReqWorker{Top: BottomC[0], Bottom: TopC[workernum-1], Turns: turn, CurrentTurn: current}
 
 		} else {
-			request = stubs.ReqWorker{Top: BottomC[workernum+1], Bottom: TopC[workernum-1], Turns: turn, CurrentTurn: current, Alive: Alive[workernum]}
+			request = stubs.ReqWorker{Top: BottomC[workernum+1], Bottom: TopC[workernum-1], Turns: turn, CurrentTurn: current}
 
 		}
 		response = new(stubs.ResWorker)
@@ -237,19 +234,15 @@ func CallWorker(subworld [][]byte, bottom, top []byte, turn, current, workernum 
 		TopC[workernum] = response.Top
 		current = response.CurrentTurn
 		Current[workernum] = current
-		fmt.Println(current)
-		if Alive[workernum] == true {
-			AliveCells += len(response.Alive)
-			Alive[workernum] = false
-		}
 
+		if alivereq[workernum] {
+			AliveCells += len(response.Alive)
+			alivereq[workernum] = false
+		}
 	}
 	worker.Close()
-	fmt.Println(current, turn, Currentturn)
 	if current == turn {
-		fmt.Println(response.World)
 		workerChannels <- response.World
-		AliveChannels <- response.Alive
 	}
 
 	return
@@ -262,7 +255,6 @@ func reconstruct(workerChannels []chan [][]byte) {
 		tempWorld = append(tempWorld, workerResults...)
 	}
 	FinalWorld = tempWorld
-	fmt.Println(len(FinalWorld))
 	done = true
 }
 
