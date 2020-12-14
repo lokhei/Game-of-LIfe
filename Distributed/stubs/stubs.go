@@ -4,6 +4,8 @@ import (
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
+// stub procedures
+
 var CallInitial = "NextStateOperation.InitialState"
 var CallReturn = "NextStateOperation.FinalState"
 var CallAlive = "NextStateOperation.Alive"

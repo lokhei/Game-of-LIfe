@@ -79,6 +79,7 @@ func Benchmark(b *testing.B) {
 	}
 	for _, t := range tests {
 		value = true
+		// make sure other tests aren't run
 		os.Stdout = nil
 		t.Turns = turnNum
 		name := fmt.Sprintf("%dx%dx%d-%d", t.ImageWidth, t.ImageHeight, turnNum, t.Threads)

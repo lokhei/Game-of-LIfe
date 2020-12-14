@@ -112,7 +112,7 @@ func makeCall(keyPresses <-chan rune, server string, events chan<- Event, p Para
 	returnedworld := responseFinal.Message
 
 	ticker.Stop()
-
+	done <- true
 	events <- FinalTurnComplete{p.Turns, calculateAliveCells(returnedworld)}
 	printBoard(p, p.Turns, returnedworld, filename, output, ioCommand, ioIdle, events)
 	events <- StateChange{p.Turns, Quitting}

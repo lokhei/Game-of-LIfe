@@ -20,7 +20,6 @@ var done bool
 var key bool
 var pause bool
 var Waddress []string
-var CAddress string
 var quit bool
 
 const alive = 255
@@ -42,10 +41,8 @@ func distributor(world [][]byte, turns, threads int) {
 	AliveChannels := make(chan []util.Cell, 0)
 
 	workerChannels := make([]chan [][]byte, len(Waddress))
-	// middle := make([][]byte, len(Waddress))
 	var bottom []byte
 	var top []byte
-	//don't want this
 
 	for i := range workerChannels {
 
@@ -59,10 +56,8 @@ func distributor(world [][]byte, turns, threads int) {
 
 			}
 
-			// workerChannels := make([]chan [][]byte, len(Waddress))
 			for i := range workerChannels {
 
-				// workerChannels[i] = make(chan [][]byte)
 				startY := i*splitThreads + rem
 				endY := (i+1)*splitThreads + rem
 
@@ -70,9 +65,6 @@ func distributor(world [][]byte, turns, threads int) {
 					startY = i * (splitThreads + 1)
 					endY = (i + 1) * (splitThreads + 1)
 				}
-
-				//pass in subworld
-				//pass in turns
 
 				if startY == 0 {
 					bottom = world[height-1]
@@ -87,8 +79,6 @@ func distributor(world [][]byte, turns, threads int) {
 				}
 				subworld := world[startY:endY]
 				go CallWorker(subworld, bottom, top, workerChannels[i], AliveChannels, Waddress[i])
-
-				//receive the edge rows and send off to respective workers
 			}
 
 			//only append subworlds if required to send back to client
@@ -112,8 +102,6 @@ func distributor(world [][]byte, turns, threads int) {
 		}
 
 	}
-	// client.Close()
-
 	FinalWorld = world
 	done = true
 }
@@ -159,7 +147,7 @@ func (s *NextStateOperation) DoKeypresses(req stubs.Request, res *stubs.Response
 	return
 }
 
-//Quit closes all instances
+//Quit closes all instances for letter 'k'
 func (s *NextStateOperation) Quit(req stubs.Request, res *stubs.Response) (err error) {
 	quit = true
 	return

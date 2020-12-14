@@ -83,17 +83,12 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	world := req.World
 	top := req.Top
 	bottom := req.Bottom
-	// res.Alive :
 
 	newWorld := make([][]byte, height)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, width)
 	}
 
-	//loop through turns
-	//after each turn, send back world[1] and world[-2]
-	//and retreive world[0] and world[-1]
-	//sets cells to dead or alive according to num of neighbours
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			neighbours := calculateNeighbours(height, width, x, y, bottom, top, world)
@@ -122,8 +117,6 @@ func (w *Worker) CalculateNextState(req stubs.ReqWorker, res *stubs.ResWorker) (
 	res.World = newWorld
 	return
 }
-
-//if called by worker, return whole subworld
 
 func main() {
 	//pAddr - works as server
